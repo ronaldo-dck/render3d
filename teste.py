@@ -1,5 +1,7 @@
 import pygame
 import sys
+import math
+from Objeto3d import Objeto3d
 
 # Inicializa o Pygame
 pygame.init()
@@ -47,12 +49,20 @@ def draw_axes(screen):
     pygame.draw.line(screen, BLACK, (DRAW_AREA_X + DRAW_AREA_WIDTH, DRAW_AREA_Y), (DRAW_AREA_X + DRAW_AREA_WIDTH, DRAW_AREA_Y + DRAW_AREA_HEIGHT), 2)
     pygame.draw.line(screen, BLACK, (DRAW_AREA_X, DRAW_AREA_Y + DRAW_AREA_HEIGHT), (DRAW_AREA_X + DRAW_AREA_WIDTH, DRAW_AREA_Y + DRAW_AREA_HEIGHT), 2)
 
+
+def create_3d_object(polyline, divisions=36):
+    vertices = []
+    obj = Objeto3d(polyline)
+    vertices = obj.rotacaoX(divisions)
+    return vertices
+
 # Função principal do programa
 def main():
     global drawing
-    
+    polylines.append([(200, 200), (400, 200)])
     button_start_rect = pygame.Rect(10, 10, 150, 50)
     button_end_rect = pygame.Rect(170, 10, 150, 50)
+    button_calc = pygame.Rect(270, 10, 150, 50)
     
     running = True
     while running:
@@ -72,6 +82,10 @@ def main():
                 elif drawing and DRAW_AREA_X <= mouse_pos[0] <= DRAW_AREA_X + DRAW_AREA_WIDTH and DRAW_AREA_Y <= mouse_pos[1] <= DRAW_AREA_Y + DRAW_AREA_HEIGHT:
                     # Adiciona o ponto atual à polyline em construção
                     current_polyline.append(mouse_pos)
+                elif button_calc.collidepoint(mouse_pos):
+                    create_3d_object(polyline=polylines[0], divisions=4)
+            
+        # create_3d_object(polyline=polylines[0], divisions=4)
         
         # Desenha a tela
         screen.fill(WHITE)
@@ -79,6 +93,7 @@ def main():
         # Desenha os botões
         draw_button(screen, button_start_rect, "Iniciar Desenho", GREEN)
         draw_button(screen, button_end_rect, "Terminar Desenho", RED)
+        draw_button(screen, button_calc, 'Gera obj', BLUE)
         
         # Desenha a área de desenho
         pygame.draw.rect(screen, GRAY, (DRAW_AREA_X, DRAW_AREA_Y, DRAW_AREA_WIDTH, DRAW_AREA_HEIGHT), 0)
@@ -102,10 +117,10 @@ def main():
         draw_mouse_coords(screen, mouse_x, mouse_y)
 
         pygame.display.flip()
-    
+        # pygame.quit()
+        # sys.exit()
     pygame.quit()
     sys.exit()
 
-# Inicia o programa
 if __name__ == "__main__":
     main()
