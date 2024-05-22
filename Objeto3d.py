@@ -29,7 +29,7 @@ class Objeto3d:
         for j in range(0, divisions * len(self.__polyline), len(self.__polyline)):
             self.__arestas.append((vertices[j], vertices[j + 1]))
 
-        for i in range(0, len(vertices)):
+        for i in range(len(vertices)):
             face = list()
             face.append(vertices[i])
             face.append(vertices[(i+1) % len(vertices)])
@@ -84,8 +84,10 @@ class Objeto3d:
 
 
 if __name__ == '__main__':
-    # obj = Objeto3d([(200, 200), (400, 200)])
-    obj = Objeto3d([(200, 200), (400, 200), (600, 200)])
-    obj.rotacaoX(4)
-    obj.atribuirLetrasEArestas()
+    obj1 = Objeto3d([(200, 200), (400, 200)])
+    obj2 = Objeto3d([(200, 200), (400, 200), (600, 200)])
+    obj1.rotacaoX(4)
+    obj2.rotacaoX(4)
+    obj1.atribuirLetrasEArestas()
+    obj2.atribuirLetrasEArestas()
     pass
