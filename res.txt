@@ -1,0 +1,19 @@
+pygame 2.5.2 (SDL 2.28.2, Python 3.10.12)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+[(200, 200), (400, 200)]
+A
+B
+C
+D
+E
+F
+G
+H
+(A, C)
+(B, D)
+(C, E)
+(D, F)
+(E, G)
+(F, H)
+(G, A)
+(H, B)
