@@ -23,6 +23,7 @@ pygame.display.set_caption("Desenho de Polylines")
 
 # Lista para armazenar polylines
 polylines = []
+objetos = []
 current_polyline = []
 drawing = False
 
@@ -53,16 +54,21 @@ def draw_axes(screen):
 def create_3d_object(polyline, divisions=36):
     vertices = []
     obj = Objeto3d(polyline)
-    vertices = obj.rotacaoX(divisions)
+    objetos.append(obj)
     return vertices
 
-# Função principal do programa
+
 def main():
-    global drawing
+    global drawing, current_mode
     polylines.append([(200, 200), (400, 200)])
     button_start_rect = pygame.Rect(10, 10, 150, 50)
     button_end_rect = pygame.Rect(170, 10, 150, 50)
-    button_calc = pygame.Rect(270, 10, 150, 50)
+    button_calc = pygame.Rect(370, 10, 150, 50)
+    button_3d = pygame.Rect(530, 10, 150, 50)
+    button_2d = pygame.Rect(690, 10, 150, 50)
+
+    current_mode = "2D"
+    current_3d_object = None
     
     running = True
     while running:
@@ -83,9 +89,12 @@ def main():
                     # Adiciona o ponto atual à polyline em construção
                     current_polyline.append(mouse_pos)
                 elif button_calc.collidepoint(mouse_pos):
-                    create_3d_object(polyline=polylines[0], divisions=4)
+                    current_3d_object = create_3d_object(polyline=polylines[0], divisions=4)
+                elif button_3d.collidepoint(mouse_pos):
+                    current_mode = "3D"
+                elif button_2d.collidepoint(mouse_pos):
+                    current_mode = "2D"
             
-        # create_3d_object(polyline=polylines[0], divisions=4)
         
         # Desenha a tela
         screen.fill(WHITE)
@@ -94,6 +103,8 @@ def main():
         draw_button(screen, button_start_rect, "Iniciar Desenho", GREEN)
         draw_button(screen, button_end_rect, "Terminar Desenho", RED)
         draw_button(screen, button_calc, 'Gera obj', BLUE)
+        draw_button(screen, button_3d, '3D', GRAY if current_mode == "3D" else WHITE)
+        draw_button(screen, button_2d, '2D', GRAY if current_mode == "2D" else WHITE)
         
         # Desenha a área de desenho
         pygame.draw.rect(screen, GRAY, (DRAW_AREA_X, DRAW_AREA_Y, DRAW_AREA_WIDTH, DRAW_AREA_HEIGHT), 0)
@@ -101,24 +112,32 @@ def main():
         # Desenha os eixos
         draw_axes(screen)
         
-        # Desenha todas as polylines já finalizadas
-        for polyline in polylines:
-            if len(polyline) > 1:
-                pygame.draw.lines(screen, BLACK, False, polyline, 2)
+        if current_mode == "2D":
+            # Desenha todas as polylines já finalizadas
+            for polyline in polylines:
+                if len(polyline) > 1:
+                    pygame.draw.lines(screen, BLACK, False, polyline, 2)
+            
+            # Desenha a polyline em construção
+            if len(current_polyline) > 1:
+                pygame.draw.lines(screen, BLUE, False, current_polyline, 2)
+            elif len(current_polyline) == 1:
+                pygame.draw.circle(screen, BLUE, current_polyline[0], 3)
         
-        # Desenha a polyline em construção
-        if len(current_polyline) > 1:
-            pygame.draw.lines(screen, BLUE, False, current_polyline, 2)
-        elif len(current_polyline) == 1:
-            pygame.draw.circle(screen, BLUE, current_polyline[0], 3)
+        elif current_mode == "3D":
+            
+                # Desenha o objeto 3D
+                for face in objetos[0].get_faces():
+                    pygame.draw.polygon(screen, BLACK, [current_3d_object.vertices[vertex] for vertex in face], 1)
+
+
+
 
         # Pega as coordenadas do mouse e desenha na tela
         mouse_x, mouse_y = pygame.mouse.get_pos()
         draw_mouse_coords(screen, mouse_x, mouse_y)
 
         pygame.display.flip()
-        # pygame.quit()
-        # sys.exit()
     pygame.quit()
     sys.exit()
 

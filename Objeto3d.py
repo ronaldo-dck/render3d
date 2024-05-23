@@ -1,5 +1,7 @@
-import math
-
+import numpy as np
+import numpy as np
+import trimesh
+import matplotlib.pyplot as plt
 
 class Objeto3d:
 
@@ -7,87 +9,109 @@ class Objeto3d:
         self.__polyline: list = polyline
         self.__vertices = list()
         self.__faces = list()
-        self.__arestas = list()
-        pass
 
     def rotacaoX(self, divisions: int) -> None:
-        vertices = []
-        print(self.__polyline)
-        for i in range(divisions):
-            angle = 2 * math.pi * i / divisions
-            cos_angle = math.cos(angle)
-            sin_angle = math.sin(angle)
-            for x, y in self.__polyline:
-                z_rotated = round(y * sin_angle, 2)
-                y_rotated = round(y * cos_angle, 2)
-                vertices.append((x, y_rotated, z_rotated))
-
-        for i in range(len(vertices)):
-            self.__arestas.append(
-                (vertices[i], vertices[(i + len(self.__polyline)) % len(vertices)]))
-
-        for j in range(0, divisions * len(self.__polyline), len(self.__polyline)):
-            self.__arestas.append((vertices[j], vertices[j + 1]))
-
-        for i in range(len(vertices)):
-            face = list()
-            face.append(vertices[i])
-            face.append(vertices[(i+1) % len(vertices)])
-            face.append(vertices[(i + len(self.__polyline)) % len(vertices)])
-            face.append(vertices[(i+1 + len(self.__polyline)) % len(vertices)])
-            self.__faces.append(face)
-
-        for v in vertices:
-            print(v)
-
-        for a in self.__arestas:
-            print(a)
-        print('faces')
-        for f in self.__faces:
-            print(f)
-
-        self.__vertices = vertices
-        return vertices
-
-    def atribuirLetrasEArestas(self):
-        if not self.__vertices:
-            print("Execute a rotação antes de atribuir letras e arestas.")
+        if len(self.__polyline) < 2:
+            print("Erro: Insuficientes pontos para rotação.")
             return
 
-        letras = [chr(i) for i in range(65, 65 + len(self.__vertices))]
-        vertice_letra_map = {letras[i]: self.__vertices[i]
-                             for i in range(len(self.__vertices))}
+        # Inicializa as listas de vértices e faces
+        vertices = []
+        faces = []
+        arestas = []
 
-        print("Vértices com letras:")
-        for letra, vertice in vertice_letra_map.items():
-            print(f"{letra}: {vertice}")
+        # Gera os pontos 3D pela rotação ao redor do eixo X
+        theta = np.linspace(0, 2 * np.pi, divisions, endpoint=False)
+        for x, y in self.__polyline:
+            for angle in theta:
+                y_rot = round(y * np.cos(angle), 2)
+                z = round(y * np.sin(angle), 2)
+                vertices.append([x, y_rot, z])
 
-        arestas_com_letras = []
-        for a in self.__arestas:
-            v1_letra = [letra for letra,
-                        vertice in vertice_letra_map.items() if vertice == a[0]]
-            v2_letra = [letra for letra,
-                        vertice in vertice_letra_map.items() if vertice == a[1]]
-            if v1_letra and v2_letra:
-                arestas_com_letras.append((v1_letra[0], v2_letra[0]))
+        # Converte a lista de vértices em um array do numpy
+        vertices = np.array(vertices)
 
-        print("Arestas com letras:")
-        for a in arestas_com_letras:
-            print(a)
+        # Define as faces do objeto 3D
+        num_points = len(self.__polyline)
+        for i in range(num_points - 1):
+            for j in range(divisions):
+                current = i * divisions + j
+                next_ = i * divisions + (j + 1) % divisions
 
-        print("Faces com letras:")
-        for face in self.__faces:
-            face_letras = [
-                letra for letra, vertice in vertice_letra_map.items() if vertice in face]
-            if len(face_letras) == len(face):
-                print(f"{face_letras}")
+                current_top = current
+                current_bottom = (i + 1) * divisions + j
+                next_top = next_
+                next_bottom = (i + 1) * divisions + (j + 1) % divisions
+
+                # Adiciona as faces
+                faces.append([current_top, next_top, next_bottom])
+                faces.append([current_top, next_bottom, current_bottom])
+
+                # Adiciona as arestas se ainda não foram adicionadas
+        
+        # Adiciona as arestas
+        for i in range(num_points):
+            for j in range(divisions):
+                # Índice do vértice atual
+                current = i * divisions + j
+                
+                # Índice do próximo vértice na mesma linha
+                next_in_row = i * divisions + (j + 1) % divisions
+                
+                # Índice do próximo vértice na próxima linha
+                next_row = (i + 1) * divisions + j
+                
+                # Adiciona a aresta entre o vértice atual e o próximo vértice na mesma linha
+                arestas.append((current, next_in_row))
+                
+                # Adiciona a aresta entre o vértice atual e o próximo vértice na próxima linha, exceto na última linha
+                if i < num_points - 1:
+                    arestas.append((current, next_row))
+
+
+        # Converte a lista de faces em um array do numpy
+        faces = np.array(faces)
+        # print(vertices)
+        # print(arestas)
+        # print(faces)
+
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+   
+
+        self.__vertices = vertices
+        self.__faces = faces
+        self.__arestas = arestas
+        return mesh
+
+    def get_faces(self):
+        return self.__faces
+
+    def get_edges(self):
+        return self.__arestas
+
+    def get_vertices(self):
+        return self.__vertices
 
 
 if __name__ == '__main__':
-    obj1 = Objeto3d([(200, 200), (400, 200)])
-    obj2 = Objeto3d([(200, 200), (400, 200), (600, 200)])
-    obj1.rotacaoX(4)
-    obj2.rotacaoX(4)
-    obj1.atribuirLetrasEArestas()
-    obj2.atribuirLetrasEArestas()
-    pass
+    obj1 = Objeto3d([(2, 4),(4, 4)])
+    
+    # Gerar o objeto 3D
+    mesh = obj1.rotacaoX(4)
+    print(obj1.get_edges())
+    # print(mesh)
+
+    # Visualizar o objeto 3D usando matplotlib
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Adiciona os vértices ao gráfico
+    ax.plot_trisurf(mesh.vertices[:,0], mesh.vertices[:,1], mesh.vertices[:,2], triangles=mesh.faces, cmap='viridis', edgecolor='none')
+    # Adiciona os vértices ao gráfico
+
+    # Configurações do gráfico
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    plt.show()
