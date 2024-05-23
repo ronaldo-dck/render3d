@@ -125,7 +125,6 @@ def main():
                 pygame.draw.circle(screen, BLUE, current_polyline[0], 3)
         
         elif current_mode == "3D":
-            
                 # Desenha o objeto 3D
                 for face in objetos[0].get_faces():
                     pygame.draw.polygon(screen, BLACK, [current_3d_object.vertices[vertex] for vertex in face], 1)

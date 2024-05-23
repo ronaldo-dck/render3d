@@ -65,6 +65,16 @@ def draw_wireframe():
     glEnd()
     
 
+def draw_triangles():
+    glBegin(GL_TRIANGLES)
+    for i, face in enumerate(faces):
+        # Usa as cores armazenadas em cores_faces para cada face
+        glColor3f(*cores_faces[i])
+        for vertex in face:
+            glVertex3fv(vertices[vertex])
+    glEnd()
+
+
 
 
 
@@ -75,7 +85,7 @@ def main():
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
     gluPerspective(45, (display[0] / display[1]), 0.1, 50.0)
-    gluLookAt(2, 0, 0,  # Posição da câmera (acima do eixo X)
+    gluLookAt(0, 2, 0,  # Posição da câmera (acima do eixo X)
               0, 0, 0,   # Ponto para onde a câmera está olhando (origem)
               0, 0, 1)   # Vetor de orientação da câmera (para cima)
 
@@ -115,6 +125,7 @@ def main():
 
         # Desenhar o objeto como wireframe
         draw_wireframe()
+        draw_triangles()
 
         pygame.display.flip()
         pygame.time.wait(10)
