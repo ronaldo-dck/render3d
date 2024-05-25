@@ -5,7 +5,6 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from Objeto3d import Objeto3d, Face
 import random
-from camera import Camera
 
 class Cena3D:
     def __init__(self, polylines=[((1,0),(-1, 1), (1, 1), (1, 0))]):
@@ -66,6 +65,18 @@ class Cena3D:
         # self.draw_triangles()
         pg.display.flip()
 
+
+    def  pipeline():
+
+
+
+    def render(self):
+        # Teste da visibilidade
+        
+        # Pegar os objetos e passar ele pipeline
+        for o in self.objetos:
+            
+
     def resize(self, width, height):
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
@@ -73,7 +84,7 @@ class Cena3D:
         gluPerspective(45, (width / height), 0.1, 1000.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        gluLookAt(200, 200, 0,  # posição da camera
+        gluLookAt(300, 300, 0,  # posição da camera
                   0, 0, 0,  # para onde a camera olha
                   0, 0, 1)  # viewUP
 

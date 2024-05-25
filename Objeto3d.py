@@ -1,12 +1,13 @@
 import numpy as np
 
 class Face:
-    def __init__(self, vertices, face):
-        v0 = np.array(vertices[face[0]])
-        v1 = np.array(vertices[face[1]])
-        v2 = np.array(vertices[face[2]])
+    def __init__(self, all_vertices, face):
+        v0 = np.array(all_vertices[face[0]])
+        v1 = np.array(all_vertices[face[1]])
+        v2 = np.array(all_vertices[face[2]])
         normal = np.cross(v1 - v0, v2 - v0)
         comprimento = np.linalg.norm(normal)
+        self.vertices = face
         self.normal = normal / comprimento
         self.centroide = np.mean([v0, v1, v2], axis=0)
 
@@ -35,11 +36,10 @@ class Objeto3d:
             return
 
         vertices = self.__generate_vertices(divisions)
-        faces = self.__generate_faces(divisions, len(self.__polyline))
-        arestas = self.__generate_edges(divisions, len(self.__polyline))
-
         self.__vertices = vertices
+        faces = self.__generate_faces(divisions, len(self.__polyline))
         self.__faces = faces
+        arestas = self.__generate_edges(divisions, len(self.__polyline))
         self.__arestas = arestas
 
     def __generate_vertices(self, divisions: int):
@@ -61,8 +61,8 @@ class Objeto3d:
                 current_bottom = (i + 1) * divisions + j
                 next_bottom = (i + 1) * divisions + (j + 1) % divisions
 
-                faces.append([current, next_, next_bottom])
-                faces.append([current, next_bottom, current_bottom])
+                faces.append(Face(self.__vertices,[current, next_, next_bottom]))
+                faces.append(Face(self.__vertices,[current, next_bottom, current_bottom]))
         return faces
 
     def __generate_edges(self, divisions: int, num_points: int):
@@ -96,9 +96,25 @@ class Objeto3d:
         centro_z = (z_min + z_max) / 2
         return (centro_x, centro_y, centro_z)
 
+    def pintor(self, observador = (1,0,0)): 
+        ordem = list()
+        for i,f in enumerate(self.__faces):
+            ordem.append([i, f.get_dist(observador)])
+        
+
+        ordem.sort(key=lambda x: x[1], reverse=True)
+        
+        faces_ordenadas = [i for i, _ in ordem]
+        return faces_ordenadas
+
+
+
 if __name__ == '__main__':
     obj1 = Objeto3d([(2, 4), (4, 4)])
-    obj1.rotacaoX(8)
-    print("Arestas:", obj1.get_edges())
-    print("Vértices:", obj1.get_vertices())
-    print("Centro da caixa envolvente:", obj1.get_centro_box_envolvente())
+    obj1.rotacaoX(3)
+    obj1.pintor()
+
+    # print("Arestas:", obj1.get_edges())
+    # print("Faces:", obj1.get_faces())
+    # print("Vértices:", obj1.get_vertices())
+    # print("Centro da caixa envolvente:", obj1.get_centro_box_envolvente())

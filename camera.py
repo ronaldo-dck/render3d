@@ -79,6 +79,21 @@ class Camera:
         ])
 
 
+class Projetion:
+    def __init__(self) -> None:
+        pass
+
+    @staticmethod
+    def projetion_matrix(dp: float):
+        return np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, -1/dp, 1]
+        ])
+        
+
+
 if __name__ == '__main__':
     camera = Camera((25, 15, 80), (20, 10, 25), (0, 1, 0))
     print(np.round(camera.rotate_matrix(), 3))
