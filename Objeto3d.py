@@ -85,7 +85,14 @@ class Objeto3d:
         return self.__arestas
 
     def get_vertices(self):
-        return self.__vertices
+
+        # Criação de um array de 1s com a mesma quantidade de linhas
+        ones_column = np.ones((self.__vertices.shape[0], 1))
+
+        # Concatenando a coluna de 1s ao array original
+        new_array = np.hstack((self.__vertices, ones_column))
+
+        return new_array
 
     def get_centro_box_envolvente(self):
         vertices_array = np.array(self.__vertices)
@@ -105,6 +112,19 @@ class Objeto3d:
         ordem.sort(key=lambda x: x[1], reverse=True)
         
         faces_ordenadas = [i for i, _ in ordem]
+        return faces_ordenadas
+
+
+    def get_faces_visible(self, observador = (1,0,0)):
+        ordem = list()
+        for i,f in enumerate(self.__faces):
+            if f.is_visible() > 0:
+                ordem.append([i, f.get_dist(observador), f])
+
+                
+        ordem.sort(key=lambda x: x[1], reverse=True)
+        
+        faces_ordenadas = [f for _, _, f in ordem]
         return faces_ordenadas
 
 

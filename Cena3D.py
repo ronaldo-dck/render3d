@@ -5,17 +5,25 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from Objeto3d import Objeto3d, Face
 import random
+from camera import Camera, Projetion
+import numpy as np
+
 
 class Cena3D:
-    def __init__(self, polylines=[((1,0),(-1, 1), (1, 1), (1, 0))]):
+    def __init__(self, polylines=[((-1, 1), (1, 1))]):
         self.objetos = [Objeto3d(p) for p in polylines]
-        print(self.objetos[0].get_faces())
         for obj in self.objetos:
-            obj.rotacaoX(16)
-        self.edges = [obj.get_edges() for obj in self.objetos]
-        self.faces = [obj.get_faces() for obj in self.objetos]
-        self.vertices = [obj.get_vertices() for obj in self.objetos]
-        self.cores_faces = [[(random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
+            obj.rotacaoX(36)
+        
+
+        self.cores_faces = [[(random.uniform(0, 1), random.uniform(
+            0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
+
+    def create_objetos(self):
+        self.camera = Camera((3, 3, 0), (0, 0, 0), (0, 0, 1))
+        self.projetion = Projetion().projetion_matrix(50)
+        self.to_screen = Projetion().to_screen(0, 800, 0, 600, 0, 800, 0, 600)
+        return self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
     def draw_axes(self):
         glColor3f(1.0, 0.0, 0.0)
@@ -39,7 +47,7 @@ class Cena3D:
     def draw_wireframe(self):
         glBegin(GL_LINES)
         glColor3f(1.0, 0.5, 0.0)
-        for i,faces in enumerate(self.faces):
+        for i, faces in enumerate(self.faces):
             for face in faces:
                 f = Face(self.vertices[i], face)
                 if f.is_visible((1, 10, 0)):
@@ -57,25 +65,36 @@ class Cena3D:
                     for vertex in face:
                         glVertex3fv(self.vertices[i][vertex])
         glEnd()
-    
+
     def draw(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         self.draw_axes()
-        self.draw_wireframe()
+        self.render()
         # self.draw_triangles()
         pg.display.flip()
 
+    def pipeline():
 
-    def  pipeline():
-
-
+        pass
 
     def render(self):
         # Teste da visibilidade
-        
+
         # Pegar os objetos e passar ele pipeline
         for o in self.objetos:
-            
+            faces = o.get_faces_visible((1, -1, 0))
+            #está processando informação de vertices não visiveis
+
+            vertices = self.create_objetos() @ o.get_vertices().T
+            vertices[[0,1]] /= vertices[-1]
+            vertices[[0,1]] =  np.round(vertices[[0,1]], 1)
+            print(vertices.T)
+            # glBegin(GL_DOT3_RGB)
+            # glColor3f(1.0, 0.5, 0.0)
+            # for i, f in enumerate(faces):
+            #     for vertex in f.vertices:
+            #         glVertex3fv(o.get_vertices()[vertex])
+            # glEnd()
 
     def resize(self, width, height):
         glViewport(0, 0, width, height)
@@ -84,7 +103,7 @@ class Cena3D:
         gluPerspective(45, (width / height), 0.1, 1000.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        gluLookAt(300, 300, 0,  # posição da camera
+        gluLookAt(3, 3, 0,  # posição da camera
                   0, 0, 0,  # para onde a camera olha
                   0, 0, 1)  # viewUP
 
@@ -106,10 +125,10 @@ class Cena3D:
         pg.init()
         display = (800, 600)
         screen = pg.display.set_mode(display, DOUBLEBUF | OPENGL | RESIZABLE)
-        self.resize(display[0], display[1])  # Inicializar a perspectiva corretamente
-        
+        # Inicializar a perspectiva corretamente
+        self.resize(display[0], display[1])
 
-        camera_speed = 0.5
+        camera_speed = 0.1
         clock = pg.time.Clock()
         running = True
         while running:
@@ -118,6 +137,9 @@ class Cena3D:
                     running = False
                 elif event.type == pg.VIDEORESIZE:
                     self.resize(event.w, event.h)
+                elif event.type == pg.KEYDOWN:
+                    if event.key == pg.K_ESCAPE:
+                        running = False
 
             keys = pg.key.get_pressed()
             self.handle_camera_movement(keys, camera_speed)
@@ -129,10 +151,12 @@ class Cena3D:
 
         pg.quit()
 
+
 if __name__ == '__main__':
-    objetos = [
-        Objeto3d(((1,0),(-1, 1), (1, 1), (1, 0))), 
-        Objeto3d(((1,0),(-2, 2), (-1, -1), (1, 0))),
-        Objeto3d(((-2,0),(-3, 1), (-2, 1), (-2, 0)))  # Novo objeto adicionado
+    polylines = [
+        (((1, 0), (-1, 1), (1, 1), (1, 0))),
+        (((1, 0), (-2, 2), (-1, -1), (1, 0))),
+        # Novo objeto adicionado
+        (((-2, 0), (-3, 1), (-2, 1), (-2, 0)))
     ]
-    Cena3D(objetos).run()
+    Cena3D().run()

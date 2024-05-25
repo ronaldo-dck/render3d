@@ -88,10 +88,20 @@ class Projetion:
         return np.array([
             [1, 0, 0, 0],
             [0, 1, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, -1/dp, 1]
+            [0, 0, 1, 0],
+            [0, 0, -1/dp, 0]
         ])
-        
+
+    @staticmethod
+    def to_screen(x_min, x_max, y_min, y_max, u_min, u_max, v_min, v_max):
+        return np.array([
+            [((u_max-u_min)/(x_max-x_min)), 0, 0, -
+             x_min*((u_max-u_min)/(x_max-x_min)) + u_min],
+            [0, ((v_min-v_max)/(y_max-y_min)), 0,
+             y_min*((v_max-v_min)/(y_max-y_min)) + v_max],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]
+        ])
 
 
 if __name__ == '__main__':
@@ -101,3 +111,21 @@ if __name__ == '__main__':
     print(camera.translate_matrix())
     print()
     print(np.round(camera.camera_matrix(), 3))
+
+    print(np.round(
+        Projetion().to_screen(
+            -8, 8, -6, 6, 0, 319, 0, 239
+        ), 3
+    )
+    )
+
+    print(np.round(
+        Projetion().projetion_matrix(40), 3
+    ))
+    
+    print(np.round(
+        Projetion().to_screen(
+            -8, 8, -6, 6, 0, 319, 0, 239
+        ) @ Projetion().projetion_matrix(40) @ camera.camera_matrix(), 3
+    )
+    )
