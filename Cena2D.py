@@ -1,86 +1,10 @@
 import pygame
 import sys
-import math
-
-# Inicializa o Pygame
-pygame.init()
-
-# Define as dimensões da janela
-screen_width, screen_height = 800, 600
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Alternar entre Cenas")
-
-# Define cores
-WHITE = (255, 255, 255)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
-
-# Classe para uma cena genérica
-class Cena:
-    def __init__(self, color):
-        self.color = color
-
-    def update(self):
-        pass  # Lógica de atualização da cena vai aqui
-
-    def draw(self, surface):
-        pass
-
-# Cena com triângulo
-class CenaTriangulo(Cena):
-    def __init__(self, color):
-        super().__init__(color)
-        self.triangle_points = [(400, 200), (300, 400), (500, 400)]
-
-    def draw(self, surface):
-        super().draw(surface)
-        pygame.draw.polygon(surface, GREEN, self.triangle_points)
-
-# Cena com cubo rotacionando
-class CenaCubo(Cena):
-    def __init__(self, color):
-        super().__init__(color)
-        self.cube_image = pygame.Surface((100, 100))
-        self.cube_image.fill(WHITE)
-        pygame.draw.rect(self.cube_image, BLACK, self.cube_image.get_rect(), 2)
-        self.angle = 0
-
-    def update(self):
-        self.angle += 1
-        if self.angle >= 360:
-            self.angle = 0
-
-    def draw(self, surface):
-        super().draw(surface)
-        rotated_image = pygame.transform.rotate(self.cube_image, self.angle)
-        new_rect = rotated_image.get_rect(center=(400, 300))
-        surface.blit(rotated_image, new_rect.topleft)
-
-# Classe para um botão
-class Botao:
-    def __init__(self, x, y, width, height, text, action):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.color = BLACK
-        self.text = text
-        self.action = action
-        self.font = pygame.font.SysFont(None, 36)
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, self.color, self.rect)
-        text_surface = self.font.render(self.text, True, WHITE)
-        text_rect = text_surface.get_rect(center=self.rect.center)
-        surface.blit(text_surface, text_rect)
-
-    def is_clicked(self, pos):
-        return self.rect.collidepoint(pos)
-
 
 from Objeto3d import Objeto3d
-class Cena2D(Cena):
+
+class Cena2D:
     def __init__(self):
-        super().__init__('RED')
         self.WIDTH, self.HEIGHT = 800, 600
         self.DRAW_AREA_WIDTH, self.DRAW_AREA_HEIGHT = 600, 400
         self.DRAW_AREA_X, self.DRAW_AREA_Y = 100, 100
@@ -93,8 +17,6 @@ class Cena2D(Cena):
 
         pygame.font.init()
         self.font = pygame.font.SysFont(None, 36)
-        self.run()
-
 
     def draw_button(self, screen, rect, text, color):
         pygame.draw.rect(screen, color, rect)
@@ -177,53 +99,3 @@ class Cena2D(Cena):
             pygame.display.flip()
         pygame.quit()
         sys.exit()
-
-
-
-
-# Classe para a cena principal
-class CenaPrincipal:
-    def __init__(self):
-        self.cena1 = Cena2D()
-        self.cena2 = CenaCubo(BLUE)
-        self.current_cena = self.cena1
-        self.botao = Botao(350, 500, 100, 50, "Trocar", self.trocar_cena)
-
-    def trocar_cena(self):
-        if self.current_cena == self.cena1:
-            self.current_cena = self.cena2
-        else:
-            self.current_cena = self.cena1
-
-    def update(self):
-        self.current_cena.update()
-
-    def draw(self, surface):
-        self.current_cena.draw(surface)
-        self.botao.draw(surface)
-
-# Instancia a cena principal
-cena_principal = CenaPrincipal()
-
-# Loop principal do jogo
-clock = pygame.time.Clock()
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if cena_principal.botao.is_clicked(event.pos):
-                cena_principal.botao.action()
-
-    # Atualiza a cena principal
-    cena_principal.update()
-
-    # Desenha a cena principal
-    cena_principal.draw(screen)
-
-    # Atualiza a tela
-    pygame.display.flip()
-
-    # Controla a taxa de frames por segundo
-    clock.tick(60)

@@ -3,6 +3,42 @@ import numpy as np
 import trimesh
 import matplotlib.pyplot as plt
 
+class Face():
+
+    def __init__(self, vertices, face):
+        v0 = np.array(vertices[face[0]])
+        v1 = np.array(vertices[face[1]])
+        v2 = np.array(vertices[face[2]])
+        normal = np.cross(v1-v0, v2-v0)
+        # Calcule o comprimento (magnitude) do vetor
+        comprimento = np.linalg.norm(normal)
+
+        # Divida cada componente pelo comprimento para obter o vetor unitário
+        self.normal = normal /comprimento
+        self.centroide = np.mean([v0,v1,v2], axis=0)
+
+    def is_visible(self, observador=(-10,20,0)):
+        O = np.array(observador) - self.centroide 
+        o = np.linalg.norm(O)
+        o = O/o
+        angle = np.dot(o, self.normal)
+
+        if angle > 0:
+            return True
+        else:
+            return False
+
+    def get_dist(self, observador=(0,20,0)):
+        diferenca = self.centroide - np.array(observador)
+        quadrado_diferenca = diferenca ** 2
+        soma_quadrados = np.sum(quadrado_diferenca)
+        distancia = np.sqrt(soma_quadrados)
+
+
+
+
+
+
 class Objeto3d:
 
     def __init__(self, polyline: list) -> None:
@@ -46,9 +82,12 @@ class Objeto3d:
                 # Adiciona as faces
                 faces.append([current_top, next_top, next_bottom])
                 faces.append([current_top, next_bottom, current_bottom])
-
                 # Adiciona as arestas se ainda não foram adicionadas
         
+        for f in faces:
+            a = Face(vertices, f)
+
+
         # Adiciona as arestas
         for i in range(num_points):
             for j in range(divisions):
@@ -91,7 +130,11 @@ class Objeto3d:
 
     def get_vertices(self):
         return self.__vertices
+    
+    def pintor(obsevador):
+        return []
 
+    
 
 if __name__ == '__main__':
     obj1 = Objeto3d([(2, 4),(4, 4)])
