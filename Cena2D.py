@@ -73,7 +73,7 @@ class Cena2D:
                     elif self.drawing and self.DRAW_AREA_X <= mouse_pos[0] <= self.DRAW_AREA_X + self.DRAW_AREA_WIDTH and self.DRAW_AREA_Y <= mouse_pos[1] <= self.DRAW_AREA_Y + self.DRAW_AREA_HEIGHT:
                         self.current_polyline.append(mouse_pos)
                     elif button_3d.collidepoint(mouse_pos):
-                        return self.polylines[0]
+                        return self.polylines
                     elif button_2d.collidepoint(mouse_pos):
                         return "2D"
                     elif button_close_polyline.collidepoint(mouse_pos):

@@ -8,10 +8,11 @@ import random
 from camera import Camera
 
 class Cena3D:
-    def __init__(self, objetos=[]):
-        self.objetos = objetos
+    def __init__(self, polylines=[((1,0),(-1, 1), (1, 1), (1, 0))]):
+        self.objetos = [Objeto3d(p) for p in polylines]
+        print(self.objetos[0].get_faces())
         for obj in self.objetos:
-            obj.rotacaoX(8)
+            obj.rotacaoX(16)
         self.edges = [obj.get_edges() for obj in self.objetos]
         self.faces = [obj.get_faces() for obj in self.objetos]
         self.vertices = [obj.get_vertices() for obj in self.objetos]
@@ -72,7 +73,7 @@ class Cena3D:
         gluPerspective(45, (width / height), 0.1, 1000.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        gluLookAt(1, 2, 0,  # posição da camera
+        gluLookAt(200, 200, 0,  # posição da camera
                   0, 0, 0,  # para onde a camera olha
                   0, 0, 1)  # viewUP
 
@@ -97,7 +98,7 @@ class Cena3D:
         self.resize(display[0], display[1])  # Inicializar a perspectiva corretamente
         
 
-        camera_speed = 0.1
+        camera_speed = 0.5
         clock = pg.time.Clock()
         running = True
         while running:
