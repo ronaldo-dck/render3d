@@ -16,7 +16,7 @@ class Cena3D:
         self.height = 900
         self.z_buffer = np.full((self.height, self.width), -float('inf'))
         self.cor_buffer = np.full((self.height, self.width, 3), [
-                                 174, 174, 174], dtype=np.uint8)
+            174, 174, 174], dtype=np.uint8)
         for obj in self.objetos:
             obj.rotacaoX(30)
 
@@ -25,8 +25,9 @@ class Cena3D:
 
     def create_objetos(self):
         self.camera = Camera((-1, 0, 0), (0, 0, 0), (0, 1, 0))
-        self.projetion = Projetion().projetion_matrix(200)
-        self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -self.width//2, self.height//2, 0, self.width, 0, self.height)
+        self.projetion = Projetion().projetion_matrix(150)
+        self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -
+                                               self.width//2, self.height//2, 0, self.width, 0, self.height)
         return self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
     def draw_axes(self):
@@ -149,11 +150,11 @@ class Cena3D:
 
                 z = z_start
                 for x in range(x_start, x_end):
-                    
+
                     if x > 0 and y > 0 and x < width and y < height:
                         if z > self.z_buffer[y, x]:
                             self.z_buffer[y, x] = z
-                            self.cor_buffer[y, x] = [70,50,100]
+                            self.cor_buffer[y, x] = [70, 50, 100]
                     z += dz
 
     def render(self):
@@ -166,8 +167,7 @@ class Cena3D:
             vertices = vertices.T
 
             for face_idx, face in enumerate(faces):
-                self.fillpoly(face, vertices,
-                              self.cores_faces[obj_idx][face_idx])
+                self.fillpoly(face, vertices, [0, 0, 0])
                 # pg.surfarray.blit_array(self.screen, cores)
 
             for y, linha in enumerate(self.cor_buffer):

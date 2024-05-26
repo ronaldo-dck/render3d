@@ -23,24 +23,10 @@ class Face:
         distancia = np.linalg.norm(diferenca)
         return distancia
 
+
 class Objeto3d:
     def __init__(self, polyline: list) -> None:
         self.__polyline = polyline
-        self.__vertices = []
-        self.__faces = []
-        self.__arestas = []
-
-    def rotacaoX(self, divisions: int) -> None:
-        if len(self.__polyline) < 2:
-            print("Erro: Insuficientes pontos para rotação.")
-            return
-
-        vertices = self.__generate_vertices(divisions)
-        self.__vertices = vertices
-        faces = self.__generate_faces(divisions, len(self.__polyline))
-        self.__faces = faces
-        arestas = self.__generate_edges(divisions, len(self.__polyline))
-        self.__arestas = arestas
 
     def __generate_vertices(self, divisions: int):
         vertices = []
@@ -52,40 +38,63 @@ class Objeto3d:
                 vertices.append([x, y_rot, z])
         return np.array(vertices)
 
-    def __generate_faces(self, divisions: int, num_points: int):
+    def rotacaoX(self, segments=4):
+        """ Cria um modelo 3D rotacionando uma polilinha em torno do eixo X. """
+
+        polyline = [[x, y, 0] for x, y in self.__polyline]
+        vertices = []
         faces = []
-        for i in range(num_points - 1):
-            for j in range(divisions):
-                current = i * divisions + j
-                next_ = i * divisions + (j + 1) % divisions
-                current_bottom = (i + 1) * divisions + j
-                next_bottom = (i + 1) * divisions + (j + 1) % divisions
+        edges = []
 
-                faces.append(Face(self.__vertices,[current, next_, next_bottom]))
-                faces.append(Face(self.__vertices,[current, next_bottom, current_bottom]))
-        return faces
+        # Adiciona vértices para cada segmento de rotação
+        for i in range(segments):
+            angle = (360 / segments) * i
+            for point in polyline:
+                rotated_point = self.rotate_point(point, angle)
+                vertices.append(rotated_point)
 
-    def __generate_edges(self, divisions: int, num_points: int):
-        arestas = []
-        for i in range(num_points):
-            for j in range(divisions):
-                current = i * divisions + j
-                next_in_row = i * divisions + (j + 1) % divisions
-                next_row = (i + 1) * divisions + j
+        # Cria faces e arestas conectando os vértices
+        for i in range(segments):
+            for j in range(len(polyline) - 1):
+                p1 = i * len(polyline) + j
+                p2 = ((i + 1) % segments) * len(polyline) + j
+                p3 = ((i + 1) % segments) * len(polyline) + (j + 1)
+                p4 = i * len(polyline) + (j + 1)
 
-                arestas.append((current, next_in_row))
-                if i < num_points - 1:
-                    arestas.append((current, next_row))
-        return arestas
+                # Criação das faces
+                faces.append(Face(vertices, [p1, p2, p3]))
+                faces.append(Face(vertices, [p1, p3, p4]))
+
+                # Criação das arestas
+                edges.append([p1, p2])
+                edges.append([p2, p3])
+                edges.append([p3, p4])
+                edges.append([p4, p1])
+                edges.append([p1, p3])
+
+        self.__vertices = np.array(vertices)
+        self.__faces = np.array(faces)
+        self.__edges = np.array(edges)
+
+    def rotate_point(self, point, angle, axis='x'):
+        """ Rotaciona um ponto em torno de um eixo por um determinado ângulo. """
+        angle_rad = np.radians(angle)
+
+        rotation_matrix = np.array([
+            [1, 0, 0],
+            [0, np.cos(angle_rad), -np.sin(angle_rad)],
+            [0, np.sin(angle_rad), np.cos(angle_rad)]
+        ])
+
+        return np.dot(rotation_matrix, point)
 
     def get_faces(self):
         return self.__faces
 
     def get_edges(self):
-        return self.__arestas
+        return self.__edges
 
     def get_vertices(self):
-
         # Criação de um array de 1s com a mesma quantidade de linhas
         ones_column = np.ones((self.__vertices.shape[0], 1))
 
@@ -103,38 +112,34 @@ class Objeto3d:
         centro_z = (z_min + z_max) / 2
         return (centro_x, centro_y, centro_z)
 
-    def pintor(self, observador = (1,0,0)): 
+    def pintor(self, observador=(1, 0, 0)):
         ordem = list()
-        for i,f in enumerate(self.__faces):
+        for i, f in enumerate(self.__faces):
             ordem.append([i, f.get_dist(observador)])
-        
 
         ordem.sort(key=lambda x: x[1], reverse=True)
-        
+
         faces_ordenadas = [i for i, _ in ordem]
         return faces_ordenadas
 
-
     def get_faces_visible(self, observador):
         ordem = list()
-        for i,f in enumerate(self.__faces):
-            if f.is_visible() > 0:
+        for i, f in enumerate(self.__faces):
+            if f.is_visible(observador):
                 ordem.append([i, f.get_dist(observador), f])
 
-                
         ordem.sort(key=lambda x: x[1], reverse=True)
-        
+
         faces_ordenadas = [f for _, _, f in ordem]
         return faces_ordenadas
 
 
-
 if __name__ == '__main__':
-    obj1 = Objeto3d([(2, 4), (4, 4)])
-    obj1.rotacaoX(3)
-    obj1.pintor()
+    obj1 = Objeto3d([(1, 2), (2, 2)])
+    obj1.rotacaoX(4)
 
-    # print("Arestas:", obj1.get_edges())
-    # print("Faces:", obj1.get_faces())
-    # print("Vértices:", obj1.get_vertices())
-    # print("Centro da caixa envolvente:", obj1.get_centro_box_envolvente())
+    print("Arestas:", obj1.get_edges())
+    print("Vértices:", np.round(obj1.get_vertices(),1))
+
+    for f in obj1.get_faces():
+        print(f.vertices)
