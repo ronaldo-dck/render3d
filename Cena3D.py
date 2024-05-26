@@ -16,17 +16,17 @@ class Cena3D:
         self.height = 900
         self.z_buffer = np.full((self.height, self.width), -float('inf'))
         self.cor_buffer = np.full((self.height, self.width, 3), [
-                                  24, 24, 24], dtype=np.uint8)
+                                 174, 174, 174], dtype=np.uint8)
         for obj in self.objetos:
-            obj.rotacaoX(36)
+            obj.rotacaoX(30)
 
         self.cores_faces = [[(random.uniform(0, 1), random.uniform(
             0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
 
     def create_objetos(self):
-        self.camera = Camera((1, 0, 0), (0, 0, 0), (0, 0, 1))
-        self.projetion = Projetion().projetion_matrix(40)
-        self.to_screen = Projetion().to_screen(0, 800, 0, 600, 0, 800, 0, 600)
+        self.camera = Camera((-1, 0, 0), (0, 0, 0), (0, 1, 0))
+        self.projetion = Projetion().projetion_matrix(200)
+        self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -self.width//2, self.height//2, 0, self.width, 0, self.height)
         return self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
     def draw_axes(self):
@@ -50,13 +50,14 @@ class Cena3D:
 
     def draw_wireframe(self):
         glBegin(GL_LINES)
-        glColor3f(1.0, 0.5, 0.0)
-        for i, faces in enumerate(self.faces):
-            for face in faces:
-                f = Face(self.vertices[i], face)
-                if f.is_visible((1, 10, 0)):
-                    for vertex in face:
-                        glVertex3fv(self.vertices[i][vertex])
+        glColor3f(1.0, 0.4, 0.0)
+        # for i, faces in enumerate(self.objetos[0].get_faces()):
+        for face in self.objetos[0].get_faces():
+            vertices = self.objetos[0].get_vertices().T[:3].T
+            f = Face(vertices, face.vertices)
+            if f.is_visible((1, 10, 0)):
+                for vertex in face.vertices:
+                    glVertex3fv(vertices[vertex])
         glEnd()
 
     def draw_triangles(self):
@@ -76,7 +77,7 @@ class Cena3D:
         self.render()
         pg.display.flip()
 
-    def fillpoly(self, face, all_vertices):
+    def fillpoly(self, face, all_vertices, color):
         i_vertices = face.vertices
         vertices = sorted(all_vertices[[i_vertices]], key=lambda v: v[1])[0]
 
@@ -109,7 +110,7 @@ class Cena3D:
         # Filling edges with vertices data
         x, z = float(x3), float(z3)
         for i in range(y3, y1):
-             if x >= 0 and i >= 0 and x < width and i < height:
+            if x >= 0 and i >= 0 and x < width and i < height:
                 aresta1[i] = [x, z]
                 x += tx31
                 z += tz31
@@ -123,7 +124,7 @@ class Cena3D:
 
         x, z = float(x2), float(z2)
         for i in range(y2, y1):
-             if x >= 0 and i >= 0 and x < width and i < height:
+            if x >= 0 and i >= 0 and x < width and i < height:
                 aresta3[i] = [x, z]
                 x += tx21
                 z += tz21
@@ -132,10 +133,11 @@ class Cena3D:
         for y in range(y3, y1):
             if y >= self.height:
                 break
+            if y < 0:
+                continue
+
             if aresta1[y][0] > aresta2[y][0]:
                 aresta1[y], aresta2[y] = aresta2[y], aresta1[y]
-
-
 
             x_start = int(aresta1[y][0])
             x_end = int(aresta2[y][0])
@@ -147,25 +149,26 @@ class Cena3D:
 
                 z = z_start
                 for x in range(x_start, x_end):
-                    if x >= 0 and y >= 0 and x < width and y < height:
-                        if z > self.z_buffer[x, y]:
-                            self.z_buffer[x, y] = z
-                            self.cor_buffer[x, y] = [120, 21, 105]
+                    
+                    if x > 0 and y > 0 and x < width and y < height:
+                        if z > self.z_buffer[y, x]:
+                            self.z_buffer[y, x] = z
+                            self.cor_buffer[y, x] = [70,50,100]
                     z += dz
 
     def render(self):
-        for o in self.objetos:
-            # faces = o.get_faces_visible((0, 0, 1))
+        for obj_idx, o in enumerate(self.objetos):
+            # faces = o.get_faces_visible((1, 0, 0))
             faces = o.get_faces()
             vertices = self.create_objetos() @ o.get_vertices().T
             vertices[[0, 1]] /= vertices[-1]
             vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
 
-            for face in faces:
-                self.fillpoly(face, vertices)
+            for face_idx, face in enumerate(faces):
+                self.fillpoly(face, vertices,
+                              self.cores_faces[obj_idx][face_idx])
                 # pg.surfarray.blit_array(self.screen, cores)
-
 
             for y, linha in enumerate(self.cor_buffer):
                 for x, pixel in enumerate(linha):
@@ -189,8 +192,17 @@ class Cena3D:
     def run(self):
         pg.init()
         display = (self.width, self.height)
+        glViewport(0, 0, self.width, self.height)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluPerspective(45, (self.width / self.height), 0.1, 1000.0)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        gluLookAt(1, 2, 0,  # posição da camera
+                  0, 0, 0,  # para onde a camera olha
+                  0, 1, 0)  # viewUP
         self.screen = pg.display.set_mode(display,  RESIZABLE)
-        camera_speed = 0.1
+        camera_speed = 0.5
         clock = pg.time.Clock()
         running = True
         while running:
@@ -200,8 +212,10 @@ class Cena3D:
                 elif event.type == pg.VIDEORESIZE:
                     self.width = event.w
                     self.height = event.h
-                    self.z_buffer = np.full((self.height, self.width), -float('inf'))
-                    self.cor_buffer = np.full((self.height, self.width, 3), (24,24,24))
+                    self.z_buffer = np.full(
+                        (self.height, self.width), -float('inf'))
+                    self.cor_buffer = np.full(
+                        (self.height, self.width, 3), (24, 24, 24))
 
                 elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
@@ -211,7 +225,9 @@ class Cena3D:
             self.handle_camera_movement(keys, camera_speed)
             self.screen.fill(pg.Color('darkslategray'))
             self.render()
-            self.draw()
+            # self.draw()
+            # self.draw_axes()
+            # self.draw_wireframe()
             pg.display.flip()
             clock.tick(24)  # Limita o loop a 60 frames por segundo
 
