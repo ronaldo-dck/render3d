@@ -1,11 +1,14 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
 
 class Face:
     def __init__(self, all_vertices, face):
         v0 = np.array(all_vertices[face[0]])
         v1 = np.array(all_vertices[face[1]])
         v2 = np.array(all_vertices[face[2]])
-        normal = np.cross(v2 - v0, v1 - v0)
+        normal = np.cross(v2 - v1, v0 - v1)
         # print(normal)
         comprimento = np.linalg.norm(normal)
         self.vertices = face
@@ -127,14 +130,48 @@ class Objeto3d:
         ordem.sort(key=lambda x: x[1], reverse=True)
 
         faces_ordenadas = [f for _, _, f in ordem]
+        print(len(faces_ordenadas), len(self.__faces))
         return faces_ordenadas
 
 
+    def visualize(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plotando vértices
+        vertices = self.get_vertices()
+        ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2])
+
+        # Plotando faces
+        for face in self.__faces:
+            v0, v1, v2 = face.vertices
+            tri = Poly3DCollection([[
+                vertices[v0][:3],
+                vertices[v1][:3],
+                vertices[v2][:3]
+            ]])
+            tri.set_color((0, 1, 0, 0.5))  # Define cor verde com transparência
+            tri.set_edgecolor('k')  # Define cor das arestas
+            ax.add_collection3d(tri)
+
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        plt.show()
+
+
 if __name__ == '__main__':
-    obj1 = Objeto3d([(0, 10), (20, 20)])
-    obj1.rotacaoX(4)
+    obj1 = Objeto3d([(0, 10), (20, 20),(20,10), (0, 10)])
+    obj1.rotacaoX(3)
 
     # print("Arestas:", obj1.get_edges())
     print("Vértices:\n", np.round(obj1.get_vertices(),1))
-    for f in obj1.get_faces_visible((-1, 0, 0)):
+    # for f in obj1.get_faces_visible((-1, 0, 0)):
+    #     print(f.vertices)
+
+
+    for f in obj1.get_faces():
         print(f.vertices)
+
+    obj1.visualize()

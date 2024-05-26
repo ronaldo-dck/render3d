@@ -10,38 +10,43 @@ import numpy as np
 
 
 class Cena3D:
-    def __init__(self, polylines=[((0, 10), (10, 10))]):
+    def __init__(self, polylines=[((10, 0), (20, 10))]):
         self.objetos = [Objeto3d(p) for p in polylines]
-        self.width = 1000
-        self.height = 900
+        self.width = 620
+        self.height = 620
         self.z_buffer = np.full((self.height, self.width), -float('inf'))
         self.cor_buffer = np.full((self.height, self.width, 3), [
             174, 174, 174], dtype=np.uint8)
         for obj in self.objetos:
-            obj.rotacaoX(3)
+            obj.rotacaoX(4)
 
-        self.camera_pos = (-1,0,0)
+        self.camera_pos = (-1, 0, 0)
+        self.camera_lookat = (0, 0, 0)
 
-        self.cores_faces = [[(random.uniform(0, 1), random.uniform(
+        self.__cores_faces = [[(random.uniform(0, 1), random.uniform(
             0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
 
     def create_objetos(self):
-        self.camera = Camera(self.camera_pos, (0, 0, 0), (0, 1, 0))
-        self.projetion = Projetion().projetion_matrix(150)
+        self.camera = Camera(self.camera_pos, self.camera_lookat, (0, 1, 0))
+        self.projetion = Projetion().projetion_matrix(100)
         self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -
                                                self.width//2, self.height//2, 0, self.width, 0, self.height)
+
+        # self.to_screen = Projetion().to_screen(-8, 8, -6, 6, 0, self.width, 0, self.height)
+
         return self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
     def fillpoly(self, face, all_vertices, color):
+
         i_vertices = face.vertices
         selected_vertices = all_vertices[i_vertices]
-        vertices = sorted(selected_vertices, key=lambda v: v[1], reverse=True)
+        vertices = sorted(selected_vertices, key=lambda v: v[1], reverse=False)
 
         (x1, y1), z1 = map(int, vertices[0][:2]), float(vertices[0][2])
         (x2, y2), z2 = map(int, vertices[1][:2]), float(vertices[1][2])
         (x3, y3), z3 = map(int, vertices[2][:2]), float(vertices[2][2])
 
-        #### # Test data
+        # Test data
         # x1, y1, z1 = 93, 251, -22.807
         # x2, y2, z2 = 198, 241, -20.129
         # x3, y3, z3 = 125, 107, -21.815
@@ -121,6 +126,19 @@ class Cena3D:
             # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
 
+            # vertices = np.array(
+            #     [
+            #         [21.2, 34.1, 18.8, 5.9,	20],
+            #         [0.7,	3.4,	5.6,	2.9,	20.9],
+            #         [42.3,	27.2,	14.6,	29.7,	31.6],
+            #     ]
+            # ).T
+            # faces = list()
+            # faces.append(Face(vertices, [0, 1, 4]))
+            # faces.append(Face(vertices, [1, 2, 4]))
+            # faces.append(Face(vertices, [2, 3, 4]))
+            # faces.append(Face(vertices, [3, 0, 4]))
+
             # vertices = np.array([
             #     [93, 251, -22.807],  # vértice 0
             #     [198, 241, -20.129],  # vértice 1
@@ -139,8 +157,14 @@ class Cena3D:
             # )
             # faces.append(Face(vertices, [1, 4, 5]))
 
+            (randomColor1, randomColor2, randomColor3) = (
+                random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
+            
             for face_idx, face in enumerate(faces):
-                    self.fillpoly(face, vertices, [face_idx*10, face_idx*10, 0])
+                # points = vertices[face.vertices].T[:2].T
+                # pg.draw.polygon(self.screen, (255, 0, 0), points)
+                self.fillpoly(face, vertices, [
+                            face_idx*10*randomColor1, face_idx*40*randomColor2, face_idx*30*randomColor3])
                 # pg.surfarray.blit_array(self.screen, cores)
 
             for y, linha in enumerate(self.cor_buffer):
@@ -152,7 +176,7 @@ class Cena3D:
     def run(self):
         pg.init()
         size = (self.width, self.height)
-        self.screen = pg.display.set_mode(size, display=1,flags= RESIZABLE)
+        self.screen = pg.display.set_mode(size, display=0, flags=RESIZABLE)
         clock = pg.time.Clock()
 
         running = True
@@ -184,8 +208,8 @@ class Cena3D:
 if __name__ == '__main__':
     polylines = [
         # (((1, 0), (-1, 1), (1, 1), (1, 0))),
-        (((100, 0), (-200, 200), (-100, -100), (100, 0))),
+        # (((100, 0), (-200, 200), (-100, -100), (100, 0))),
         # Novo objeto adicionado
-        (((200, 400), (300, 100), (200, 1), (10, 0)))
+        ((-10, 10), (10, 10))
     ]
-    Cena3D().run()
+    Cena3D(polylines).run()

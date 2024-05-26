@@ -122,10 +122,20 @@ if __name__ == '__main__':
     print(np.round(
         Projetion().projetion_matrix(40), 3
     ))
-    
+
     print(np.round(
         Projetion().to_screen(
             -8, 8, -6, 6, 0, 319, 0, 239
         ) @ Projetion().projetion_matrix(40) @ camera.camera_matrix(), 3
     )
     )
+
+    print('----------------------------- AQUI')
+    print(np.round (camera.camera_matrix() @ np.array(
+        [
+            [25, 21.2, 34.1, 18.8, 5.9,	20],
+            [15, 0.7,	3.4,	5.6,	2.9,	20.9],
+            [80, 42.3,	27.2,	14.6,	29.7,	31.6],
+            [1, 1,	1,	1,	1,	1]
+        ]
+    ), 3))

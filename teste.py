@@ -1,62 +1,109 @@
+import pygame
 import numpy as np
-import matplotlib.pyplot as plt
 
-def z_buffer(vertices):
-    # Encontre os limites do polígono
-    min_x = min(vertices, key=lambda vertex: vertex[0])[0]
-    max_x = max(vertices, key=lambda vertex: vertex[0])[0]
-    min_y = min(vertices, key=lambda vertex: vertex[1])[1]
-    max_y = max(vertices, key=lambda vertex: vertex[1])[1]
+# Configurações iniciais
+width, height = 800, 600
+background_color = (0, 0, 0)
+screen = pygame.display.set_mode((width, height))
+
+# Inicialização do Z-buffer
+z_buffer = np.full((width, height), np.inf)
+
+# Função para interpolar valores
+def interpolate(y, v0, v1):
+    dy = v1[1] - v0[1]
+    if dy == 0:
+        return v0[0], v0[2], v0[3]
+    dx = v1[0] - v0[0]
+    dz = v1[2] - v0[2]
+    dr = v1[3][0] - v0[3][0]
+    dg = v1[3][1] - v0[3][1]
+    db = v1[3][2] - v0[3][2]
+    x = v0[0] + dx * (y - v0[1]) / dy
+    z = v0[2] + dz * (y - v0[1]) / dy
+    r = v0[3][0] + dr * (y - v0[1]) / dy
+    g = v0[3][1] + dg * (y - v0[1]) / dy
+    b = v0[3][2] + db * (y - v0[1]) / dy
+    return x, z, (r, g, b)
+
+# Função para rasterizar um polígono com sombreamento Gouraud
+def draw_polygon(screen, z_buffer, vertices):
+    # Triangulação simples para um polígono convexo
+    # Supondo que o polígono é definido como uma lista de vértices [(x1, y1, z1, (r1, g1, b1)), (x2, y2, z2, (r2, g2, b2)), ...]
+    triangles = []
+    for i in range(1, len(vertices) - 1):
+        triangles.append((vertices[0], vertices[i], vertices[i + 1]))
     
-    # Inicialize o Z-buffer
-    width = max_x - min_x + 1
-    height = max_y - min_y + 1
-    z_buffer = np.full((height, width), float('inf'))
+    for triangle in triangles:
+        draw_triangle(screen, z_buffer, triangle)
+
+def draw_triangle(screen, z_buffer, triangle):
+    v1, v2, v3 = triangle
+    # Ordenando os vértices pelo eixo y (scanline order)
+    if v1[1] > v2[1]: v1, v2 = v2, v1
+    if v2[1] > v3[1]: v2, v3 = v3, v2
+    if v1[1] > v3[1]: v1, v3 = v3, v1
+
+    def fill_scanline(y, x_start, z_start, color_start, x_end, z_end, color_end):
+        if x_start > x_end:
+            x_start, x_end = x_end, x_start
+            z_start, z_end = z_end, z_start
+            color_start, color_end = color_end, color_start
+        
+        dx = x_end - x_start
+        if dx == 0:
+            z = (z_start + z_end) / 2
+            color = [(color_start[i] + color_end[i]) / 2 for i in range(3)]
+            if 0 <= int(x_start) < width and z < z_buffer[int(x_start), y]:
+                z_buffer[int(x_start), y] = z
+                screen.set_at((int(x_start), y), color)
+            return
+        
+        for x in range(int(x_start), int(x_end) + 1):
+            z = z_start + (z_end - z_start) * (x - x_start) / dx
+            color = [
+                color_start[i] + (color_end[i] - color_start[i]) * (x - x_start) / dx
+                for i in range(3)
+            ]
+            if 0 <= x < width and 0 <= y < height and z < z_buffer[x, y]:
+                z_buffer[x, y] = z
+                screen.set_at((x, y), color)
     
-    # Para cada linha de varredura
-    for y in range(min_y, max_y + 1):
-        intersections = []
-        # Inicialize os valores de x_prev e z_prev
-        x_prev = None
-        z_prev = None
-        # Para cada aresta do polígono
-        for i in range(len(vertices)):
-            j = (i + 1) % len(vertices)
-            # Verifique se a aresta cruza a linha de varredura atual
-            if (vertices[i][1] <= y <= vertices[j][1]) or (vertices[j][1] <= y <= vertices[i][1]):
-                # Calcule a interseção da aresta com a linha de varredura
-                if vertices[i][1] != vertices[j][1]:
-                    x_intersect = vertices[i][0] + (y - vertices[i][1]) * (vertices[j][0] - vertices[i][0]) / (vertices[j][1] - vertices[i][1])
-                    z_intersect = vertices[i][2] + (y - vertices[i][1]) * (vertices[j][2] - vertices[i][2]) / (vertices[j][1] - vertices[i][1])
-                else:
-                    # Se a aresta é horizontal, use o valor do vértice inferior
-                    x_intersect = vertices[i][0]
-                    z_intersect = vertices[i][2]
-                
-                # Adicione a interseção à lista de interseções
-                intersections.append((x_intersect, z_intersect))
+    for y in range(int(v1[1]), int(v2[1]) + 1):
+        x_start, z_start, color_start = interpolate(y, v1, v2)
+        x_end, z_end, color_end = interpolate(y, v1, v3)
+        fill_scanline(y, x_start, z_start, color_start, x_end, z_end, color_end)
+    
+    for y in range(int(v2[1]), int(v3[1]) + 1):
+        x_start, z_start, color_start = interpolate(y, v2, v3)
+        x_end, z_end, color_end = interpolate(y, v1, v3)
+        fill_scanline(y, x_start, z_start, color_start, x_end, z_end, color_end)
+
+# Vertices do polígono (exemplo)
+vertices = [
+    (300, 200, 1, (255, 0, 0)),  # Vermelho
+    (500, 200, 1, (0, 255, 0)),  # Verde
+    (400, 400, 0.5, (0, 0, 255))  # Azul
+]
+
+# Função principal
+def main():
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
         
-        # Classifique as interseções com base em x
-        intersections.sort(key=lambda intersection: intersection[0])
+        screen.fill(background_color)
         
-        # Preencha os pixels entre as interseções
-        for i in range(0, len(intersections), 2):
-            x_start = max(min_x, int(intersections[i][0]))
-            x_end = min(max_x, int(intersections[i + 1][0]))
-            for x in range(x_start, x_end + 1):
-                z_buffer[y - min_y, x - min_x] = min(intersections[i][1], z_buffer[y - min_y, x - min_x])
+        # Reinicialize o Z-buffer a cada quadro
+        z_buffer = np.full((width, height), np.inf)
+        
+        draw_polygon(screen, z_buffer, vertices)
+        
+        pygame.display.flip()
 
-    return z_buffer
+    pygame.quit()
 
-def plot_z_buffer(z_buffer):
-    plt.imshow(z_buffer, cmap='viridis', origin='lower')
-    plt.colorbar(label='Profundidade')
-    plt.xlabel('Coordenada X')
-    plt.ylabel('Coordenada Y')
-    plt.title('Z-buffer')
-    plt.show()
-
-# Exemplo de uso
-vertices = [(0, 0, 0), (2, 4, 1), (5, 2, 2)]
-z_buffer_result = z_buffer(vertices)
-plot_z_buffer(z_buffer_result)
+if __name__ == "__main__":
+    main()

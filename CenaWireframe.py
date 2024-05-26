@@ -9,9 +9,9 @@ from Objeto3d import Objeto3d
 class CenaWireframe:
     def __init__(self, polylines=[((1, 0), (-1, 1), (1, 1), (1, 0))]):
         self.objetos = [Objeto3d(p) for p in polylines]
-        self.camera_pos = [1, 0, 0]  # Posição inicial da câmera
+        self.camera_pos = [-30, 0, 0]  # Posição inicial da câmera
         for obj in self.objetos:
-            obj.rotacaoX(3)
+            obj.rotacaoX(4)
         self.edges = [obj.get_edges() for obj in self.objetos]
         self.faces = [obj.get_faces() for obj in self.objetos]
         self.vertices = [obj.get_vertices() for obj in self.objetos]
@@ -41,17 +41,41 @@ class CenaWireframe:
         glColor3f(1.0, 0.5, 0.0)
         for i, faces in enumerate(self.faces):
             for face in faces:
-                # if face.is_visible((cx, cy, cz)):
-                    print(len(faces))
+                if face.is_visible((cx, cy, cz)):
                     for vertex in face.vertices:
                         glVertex3fv(self.vertices[i][vertex][:3])
+        glEnd()
+
+    def draw_wireframe_all(self):
+        # cx, cy, cz = self.camera_pos
+        glBegin(GL_LINES)
+        glColor3f(0.5, 1.0, 0.0)
+        for i, edges in enumerate(self.edges):
+            for edge in edges:
+                for vertex in edge:
+                    glVertex3fv(self.vertices[i][vertex][:3])
         glEnd()
 
     def draw(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         self.draw_axes()
-        self.draw_wireframe()
+        self.draw_faces()
+        self.draw_wireframe_all()
         pg.display.flip()
+
+    def draw_faces(self):
+        cx, cy, cz = self.camera_pos
+        glBegin(GL_TRIANGLES)
+        glColor3f(1.0, 0.5, 0.0)
+        for i, faces in enumerate(self.faces):
+            for face in faces:
+                if face.is_visible((0, 20, 0)):
+                    glColor3f(1.0, 0.5*i, 0.0)
+                # else:
+                #     glColor3f(0.4*i, 0.1, 0.7)
+                    for vertex in face.vertices:
+                        glVertex3fv(self.vertices[i][vertex][:3])
+        glEnd()
 
     def resize(self, width, height):
         glViewport(0, 0, width, height)
@@ -121,6 +145,10 @@ if __name__ == '__main__':
         # ((1,0),(-1, 1), (1, 1), (1, 0)),
         # ((1,0),(-2, 2), (-1, -1), (1, 0)),
         # ((-2,0),(-3, 1), (-2, 1), (-2, 0)) ,
-        ((1, 0), (2, 3))  # Novo objeto adicionado
+        # (((20, 40), (30, 10), (30, 40), (20, 40)))  # Novo objeto adicionado
+        # (((20, 40), (30, 10))),
+        ((-10, 10), (10, 10))
+
+        # Novo objeto adicionado
     ]
     CenaWireframe(objetos).run()

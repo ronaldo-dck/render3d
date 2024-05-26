@@ -11,7 +11,7 @@ class Cena2D:
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Desenho de Polylines")
 
-        self.polylines = [((1,0),(2,3))]
+        self.polylines = []
         self.current_polyline = []
         self.drawing = False
 
@@ -45,7 +45,7 @@ class Cena2D:
         return objetos
 
     def run(self):
-
+        
         pygame.init()
         button_start_rect = pygame.Rect(10, 10, 150, 50)
         button_end_rect = pygame.Rect(170, 10, 150, 50)
