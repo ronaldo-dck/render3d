@@ -1,41 +1,45 @@
+import pygame as pg
+from pygame.locals import *
+from OpenGL.GL import *
+from OpenGL.GLUT import *
+from OpenGL.GLU import *
+from Objeto3d import Objeto3d, Face
+import random
+from camera import Camera, Projetion
 import numpy as np
-import pygame
 
-class Face:
-    def __init__(self, vertices):
-        self.vertices = vertices
+class Cena3D:
+    def __init__(self, polylines=[((0, 10), (10, 10))]):
+        self.objetos = [Objeto3d(p) for p in polylines]
+        self.width = 1000
+        self.height = 900
+        self.camera_position_str = ""
+        self.z_buffer = np.full((self.height, self.width), -float('inf'))
+        self.cor_buffer = np.full((self.height, self.width, 3), [174, 174, 174], dtype=np.uint8)
+        for obj in self.objetos:
+            obj.rotacaoX(4)
 
-class Objeto:
-    def __init__(self, vertices, faces):
-        self.vertices = vertices
-        self.faces = faces
-
-    def get_faces(self):
-        return self.faces
-
-    def get_vertices(self):
-        return self.vertices
-
-class Renderer:
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-        self.z_buffer = np.full((height, width), -np.inf)
-        self.cor_buffer = np.full((height, width, 3), [0, 0, 0])
-        self.screen = pygame.Surface((width, height))
-        self.objetos = []
-
-    def add_objeto(self, objeto):
-        self.objetos.append(objeto)
+        self.cores_faces = [[(random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
+        
+        self.camera_position = np.array([-1, 0, 0], dtype=float)
+        self.camera_look_at = np.array([0, 0, 0], dtype=float)
+        
+    def create_objetos(self):
+        self.camera = Camera(self.camera_position, self.camera_look_at, (0, 1, 0))
+        self.projetion = Projetion().projetion_matrix(50)
+        self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -self.width//2, self.height//2, 0, self.width, 0, self.height)
+        return self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
     def fillpoly(self, face, all_vertices, color):
         i_vertices = face.vertices
-        vertices = sorted(all_vertices[i_vertices], key=lambda v: v[1])
+        selected_vertices = all_vertices[i_vertices]
+        vertices = sorted(selected_vertices, key=lambda v: v[1], reverse=True)
 
         (x1, y1), z1 = map(int, vertices[0][:2]), float(vertices[0][2])
         (x2, y2), z2 = map(int, vertices[1][:2]), float(vertices[1][2])
         (x3, y3), z3 = map(int, vertices[2][:2]), float(vertices[2][2])
 
+        # Calculate inverse slope coefficients for edges
         tx21 = (x2 - x1) / (y2 - y1) if (y2 - y1) != 0 else 0
         tx31 = (x3 - x1) / (y3 - y1) if (y3 - y1) != 0 else 0
         tx32 = (x3 - x2) / (y3 - y2) if (y3 - y2) != 0 else 0
@@ -51,6 +55,7 @@ class Renderer:
         aresta2 = np.full((height, 2), 0.0)
         aresta3 = np.full((height, 2), 0.0)
 
+        # Filling edges with vertices data
         x, z = float(x3), float(z3)
         for i in range(y3, y1):
             if x >= 0 and i >= 0 and x < width and i < height:
@@ -72,6 +77,7 @@ class Renderer:
                 x += tx21
                 z += tz21
 
+        # Fill the polygon
         for y in range(y3, y1):
             if y >= self.height:
                 break
@@ -91,6 +97,7 @@ class Renderer:
 
                 z = z_start
                 for x in range(x_start, x_end):
+
                     if x > 0 and y > 0 and x < width and y < height:
                         if z > self.z_buffer[y, x]:
                             self.z_buffer[y, x] = z
@@ -98,42 +105,87 @@ class Renderer:
                     z += dz
 
     def render(self):
+        
+        default_color = [174, 174, 174]
+        for y in range(self.height):
+            for x in range(self.width):
+                self.cor_buffer[y, x] = default_color
+
+      
         for obj_idx, o in enumerate(self.objetos):
+            faces = o.get_faces_visible((1, 0, 0))
             faces = o.get_faces()
-            vertices = o.get_vertices()
+            vertices = self.create_objetos() @ o.get_vertices().T
+            vertices[[0, 1]] /= vertices[-1]
+            vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
+            vertices = vertices.T
 
             for face_idx, face in enumerate(faces):
-                self.fillpoly(face, vertices, [70, 50, 100])
+                self.fillpoly(face, vertices, [face_idx * 10, face_idx * 10, 0])
 
             for y, linha in enumerate(self.cor_buffer):
                 for x, pixel in enumerate(linha):
                     self.screen.set_at((x, y), (pixel[0], pixel[1], pixel[2]))
+        
+        pg.font.init()
+        font = pg.font.SysFont(None, 24)
+        text = font.render(self.camera_position_str, True, (255, 255, 255))
+        self.screen.blit(text, (10, 10))
 
-# Dados sintéticos para teste
-vertices = np.array([
-    [93, 251, -22.807],
-    [198, 241, -20.129],
-    [125, 107, -21.815]
-])
 
-faces = [Face([0, 1, 2])]
+    def handle_camera_movement(self, keys):
+        speed = 5
+        if keys[pg.K_LEFT]:
+            self.camera_position[0] -= speed
+            # self.camera_look_at[0] -= speed
+        if keys[pg.K_RIGHT]:
+            self.camera_position[0] += speed
+            # self.camera_look_at[0] += speed
+        if keys[pg.K_UP]:
+            self.camera_position[2] -= speed
+            # self.camera_look_at[2] -= speed
+        if keys[pg.K_DOWN]:
+            self.camera_position[2] += speed
+            # self.camera_look_at[2] += speed        
 
-objeto = Objeto(vertices, faces)
+    def run(self):
+        pg.init()
+        display = (self.width, self.height)
+        self.screen = pg.display.set_mode(display, RESIZABLE)
+        clock = pg.time.Clock()
 
-renderer = Renderer(300, 300)
-renderer.add_objeto(objeto)
-renderer.render()
+        running = True
+        while running:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    running = False
+                elif event.type == pg.VIDEORESIZE:
+                    self.width = event.w
+                    self.height = event.h
+                    self.z_buffer = np.full((self.height, self.width), -float('inf'))
+                    self.cor_buffer = np.full((self.height, self.width, 3), (24, 24, 24))
 
-# Mostrar a imagem renderizada (necessita de pygame)
-pygame.init()
-screen = pygame.display.set_mode((300, 300))
-pygame.display.set_caption('Renderização')
-screen.blit(renderer.screen, (0, 0))
-pygame.display.flip()
+                elif event.type == pg.KEYDOWN:
+                    if event.key == pg.K_ESCAPE:
+                        running = False
+            self.camera_position_str = f"({self.camera_position[0]}, {self.camera_position[1]}, {self.camera_position[2]})"
 
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-pygame.quit()
+            keys = pg.key.get_pressed()
+            if any(keys):
+                self.handle_camera_movement(keys)
+                
+            # self.screen.fill(pg.Color('darkslategray'))
+            self.render()
+
+            pg.display.flip()
+            clock.tick(24)  # Limita o loop a 24 frames por segundo
+
+        pg.quit()
+
+
+if __name__ == '__main__':
+    polylines = [
+        (((100, 0), (-200, 200), (-100, -100), (100, 0))),
+        (((200, 400), (300, 100), (200, 1), (10, 0)))
+    ]
+    Cena3D().run()

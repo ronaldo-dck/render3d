@@ -18,13 +18,13 @@ class Cena3D:
         self.cor_buffer = np.full((self.height, self.width, 3), [
             174, 174, 174], dtype=np.uint8)
         for obj in self.objetos:
-            obj.rotacaoX(30)
+            obj.rotacaoX(4)
 
         self.cores_faces = [[(random.uniform(0, 1), random.uniform(
             0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
 
     def create_objetos(self):
-        self.camera = Camera((-1, 0, 0), (0, 0, 0), (0, 1, 0))
+        self.camera = Camera((500, 0, 500), (0, 0, 0), (0, 1, 0))
         self.projetion = Projetion().projetion_matrix(150)
         self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -
                                                self.width//2, self.height//2, 0, self.width, 0, self.height)
