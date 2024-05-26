@@ -30,64 +30,16 @@ class Cena3D:
                                                self.width//2, self.height//2, 0, self.width, 0, self.height)
         return self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
-    def draw_axes(self):
-        glColor3f(1.0, 0.0, 0.0)
-        glBegin(GL_LINES)
-        glVertex3f(0, 0, 0)
-        glVertex3f(1000, 0, 0)
-        glEnd()
-
-        glColor3f(0.0, 1.0, 0.0)
-        glBegin(GL_LINES)
-        glVertex3f(0, 0, 0)
-        glVertex3f(0, 1000, 0)
-        glEnd()
-
-        glColor3f(0.0, 0.0, 1.0)
-        glBegin(GL_LINES)
-        glVertex3f(0, 0, 0)
-        glVertex3f(0, 0, 1000)
-        glEnd()
-
-    def draw_wireframe(self):
-        glBegin(GL_LINES)
-        glColor3f(1.0, 0.4, 0.0)
-        # for i, faces in enumerate(self.objetos[0].get_faces()):
-        for face in self.objetos[0].get_faces():
-            vertices = self.objetos[0].get_vertices().T[:3].T
-            f = Face(vertices, face.vertices)
-            if f.is_visible((1, 10, 0)):
-                for vertex in face.vertices:
-                    glVertex3fv(vertices[vertex])
-        glEnd()
-
-    def draw_triangles(self):
-        glBegin(GL_TRIANGLES)
-        for i, faces in enumerate(self.faces):
-            for j, face in enumerate(faces):
-                f = Face(self.vertices[i], face)
-                if f.is_visible((1, 10, 0)):
-                    glColor3f(*self.cores_faces[i][j])
-                    for vertex in face:
-                        glVertex3fv(self.vertices[i][vertex])
-        glEnd()
-
-    def draw(self):
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        self.draw_axes()
-        self.render()
-        pg.display.flip()
-
     def fillpoly(self, face, all_vertices, color):
         i_vertices = face.vertices
-        vertices = sorted(all_vertices[[i_vertices]], key=lambda v: v[1])[0]
+        selected_vertices = all_vertices[i_vertices]
+        vertices = sorted(selected_vertices, key=lambda v: v[1], reverse=True)
 
         (x1, y1), z1 = map(int, vertices[0][:2]), float(vertices[0][2])
         (x2, y2), z2 = map(int, vertices[1][:2]), float(vertices[1][2])
         (x3, y3), z3 = map(int, vertices[2][:2]), float(vertices[2][2])
-        # print(vertices)
-        # exit()
-        # Test data
+
+        #### # Test data
         # x1, y1, z1 = 93, 251, -22.807
         # x2, y2, z2 = 198, 241, -20.129
         # x3, y3, z3 = 125, 107, -21.815
@@ -154,20 +106,38 @@ class Cena3D:
                     if x > 0 and y > 0 and x < width and y < height:
                         if z > self.z_buffer[y, x]:
                             self.z_buffer[y, x] = z
-                            self.cor_buffer[y, x] = [70, 50, 100]
+                            self.cor_buffer[y, x] = color
                     z += dz
 
     def render(self):
         for obj_idx, o in enumerate(self.objetos):
-            # faces = o.get_faces_visible((1, 0, 0))
+            faces = o.get_faces_visible((1, 0, 0))
             faces = o.get_faces()
             vertices = self.create_objetos() @ o.get_vertices().T
             vertices[[0, 1]] /= vertices[-1]
             vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
 
+            # vertices = np.array([
+            #     [93, 251, -22.807],  # vértice 0
+            #     [198, 241, -20.129],  # vértice 1
+            #     [125, 107, -21.815],  # vértice 2
+            #     [400, 100, -19.815],  # vértice 3 (novo)
+            #     [400, 500, -8.815],  # vértice 4 (novo)
+            #     [200, 550, -17.815]  # vértice 5 (novo)
+            # ])
+            # faces = list()
+
+            # faces.append(
+            #     Face(vertices, [0, 1, 2])
+            # )
+            # faces.append(
+            #     Face(vertices, [3, 4, 5])
+            # )
+            # faces.append(Face(vertices, [1, 4, 5]))
+
             for face_idx, face in enumerate(faces):
-                self.fillpoly(face, vertices, [0, 0, 0])
+                self.fillpoly(face, vertices, [face_idx*10, face_idx*10, 0])
                 # pg.surfarray.blit_array(self.screen, cores)
 
             for y, linha in enumerate(self.cor_buffer):
@@ -175,35 +145,12 @@ class Cena3D:
                     self.screen.set_at((x, y), (pixel[0], pixel[1], pixel[2]))
                     # self.screen.blit_array(sel, (pixel[0], pixel[1], pixel[2]))
 
-    def handle_camera_movement(self, keys, camera_speed):
-        if keys[pg.K_LEFT] or keys[pg.K_a]:
-            glTranslatef(-camera_speed, 0, 0)
-        if keys[pg.K_RIGHT] or keys[pg.K_d]:
-            glTranslatef(camera_speed, 0, 0)
-        if keys[pg.K_UP] or keys[pg.K_q]:
-            glTranslatef(0, camera_speed, 0)
-        if keys[pg.K_DOWN] or keys[pg.K_e]:
-            glTranslatef(0, -camera_speed, 0)
-        if keys[pg.K_w]:
-            glTranslatef(0, 0, camera_speed)
-        if keys[pg.K_s]:
-            glTranslatef(0, 0, -camera_speed)
-
     def run(self):
         pg.init()
         display = (self.width, self.height)
-        glViewport(0, 0, self.width, self.height)
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        gluPerspective(45, (self.width / self.height), 0.1, 1000.0)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-        gluLookAt(1, 2, 0,  # posição da camera
-                  0, 0, 0,  # para onde a camera olha
-                  0, 1, 0)  # viewUP
         self.screen = pg.display.set_mode(display,  RESIZABLE)
-        camera_speed = 0.5
         clock = pg.time.Clock()
+
         running = True
         while running:
             for event in pg.event.get():
@@ -221,13 +168,9 @@ class Cena3D:
                     if event.key == pg.K_ESCAPE:
                         running = False
 
-            keys = pg.key.get_pressed()
-            self.handle_camera_movement(keys, camera_speed)
             self.screen.fill(pg.Color('darkslategray'))
             self.render()
-            # self.draw()
-            # self.draw_axes()
-            # self.draw_wireframe()
+
             pg.display.flip()
             clock.tick(24)  # Limita o loop a 60 frames por segundo
 
