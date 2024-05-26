@@ -5,12 +5,13 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from Objeto3d import Objeto3d
 
+
 class CenaWireframe:
-    def __init__(self, polylines=[((1,0),(-1, 1), (1, 1), (1, 0))]):
+    def __init__(self, polylines=[((1, 0), (-1, 1), (1, 1), (1, 0))]):
         self.objetos = [Objeto3d(p) for p in polylines]
-        self.camera_pos = [20, 20, 0]  # Posição inicial da câmera
+        self.camera_pos = [1, 0, 0]  # Posição inicial da câmera
         for obj in self.objetos:
-            obj.rotacaoX(16)
+            obj.rotacaoX(3)
         self.edges = [obj.get_edges() for obj in self.objetos]
         self.faces = [obj.get_faces() for obj in self.objetos]
         self.vertices = [obj.get_vertices() for obj in self.objetos]
@@ -18,7 +19,7 @@ class CenaWireframe:
     def draw_axes(self):
         glColor3f(1.0, 0.0, 0.0)
         glBegin(GL_LINES)
-        glVertex3f(0, 0, 0)
+        glVertex3f(-100, 0, 0)
         glVertex3f(1000, 0, 0)
         glEnd()
 
@@ -30,7 +31,7 @@ class CenaWireframe:
 
         glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINES)
-        glVertex3f(0, 0, 0)
+        glVertex3f(0, 0, -1000)
         glVertex3f(0, 0, 1000)
         glEnd()
 
@@ -38,15 +39,13 @@ class CenaWireframe:
         cx, cy, cz = self.camera_pos
         glBegin(GL_LINES)
         glColor3f(1.0, 0.5, 0.0)
-        for i,faces in enumerate(self.faces):
+        for i, faces in enumerate(self.faces):
             for face in faces:
-                if face.is_visible((cx, cy, cz)):
+                # if face.is_visible((cx, cy, cz)):
+                    print(len(faces))
                     for vertex in face.vertices:
                         glVertex3fv(self.vertices[i][vertex][:3])
         glEnd()
-
-
-
 
     def draw(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -93,9 +92,10 @@ class CenaWireframe:
         pg.init()
         display = (800, 600)
         screen = pg.display.set_mode(display, DOUBLEBUF | OPENGL | RESIZABLE)
-        self.resize(display[0], display[1])  # Inicializar a perspectiva corretamente
+        # Inicializar a perspectiva corretamente
+        self.resize(display[0], display[1])
 
-        camera_speed = 0.5
+        camera_speed = 0.1
         clock = pg.time.Clock()
         running = True
         while running:
@@ -115,10 +115,12 @@ class CenaWireframe:
 
         pg.quit()
 
+
 if __name__ == '__main__':
     objetos = [
-        ((1,0),(-1, 1), (1, 1), (1, 0)), 
-        ((1,0),(-2, 2), (-1, -1), (1, 0)),
-        ((-2,0),(-3, 1), (-2, 1), (-2, 0))  # Novo objeto adicionado
+        # ((1,0),(-1, 1), (1, 1), (1, 0)),
+        # ((1,0),(-2, 2), (-1, -1), (1, 0)),
+        # ((-2,0),(-3, 1), (-2, 1), (-2, 0)) ,
+        ((1, 0), (2, 3))  # Novo objeto adicionado
     ]
     CenaWireframe(objetos).run()

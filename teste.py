@@ -1,191 +1,62 @@
-import pygame as pg
-from pygame.locals import *
-from OpenGL.GL import *
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
-from Objeto3d import Objeto3d, Face
-import random
-from camera import Camera, Projetion
 import numpy as np
+import matplotlib.pyplot as plt
 
-class Cena3D:
-    def __init__(self, polylines=[((0, 10), (10, 10))]):
-        self.objetos = [Objeto3d(p) for p in polylines]
-        self.width = 1000
-        self.height = 900
-        self.camera_position_str = ""
-        self.z_buffer = np.full((self.height, self.width), -float('inf'))
-        self.cor_buffer = np.full((self.height, self.width, 3), [174, 174, 174], dtype=np.uint8)
-        for obj in self.objetos:
-            obj.rotacaoX(4)
-
-        self.cores_faces = [[(random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
-        
-        self.camera_position = np.array([-1, 0, 0], dtype=float)
-        self.camera_look_at = np.array([0, 0, 0], dtype=float)
-        
-    def create_objetos(self):
-        self.camera = Camera(self.camera_position, self.camera_look_at, (0, 1, 0))
-        self.projetion = Projetion().projetion_matrix(50)
-        self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -self.width//2, self.height//2, 0, self.width, 0, self.height)
-        return self.to_screen @ self.projetion @ self.camera.camera_matrix()
-
-    def fillpoly(self, face, all_vertices, color):
-        i_vertices = face.vertices
-        selected_vertices = all_vertices[i_vertices]
-        vertices = sorted(selected_vertices, key=lambda v: v[1], reverse=True)
-
-        (x1, y1), z1 = map(int, vertices[0][:2]), float(vertices[0][2])
-        (x2, y2), z2 = map(int, vertices[1][:2]), float(vertices[1][2])
-        (x3, y3), z3 = map(int, vertices[2][:2]), float(vertices[2][2])
-
-        # Calculate inverse slope coefficients for edges
-        tx21 = (x2 - x1) / (y2 - y1) if (y2 - y1) != 0 else 0
-        tx31 = (x3 - x1) / (y3 - y1) if (y3 - y1) != 0 else 0
-        tx32 = (x3 - x2) / (y3 - y2) if (y3 - y2) != 0 else 0
-
-        tz21 = (z2 - z1) / (y2 - y1) if (y2 - y1) != 0 else 0
-        tz31 = (z3 - z1) / (y3 - y1) if (y3 - y1) != 0 else 0
-        tz32 = (z3 - z2) / (y3 - y2) if (y3 - y2) != 0 else 0
-
-        height = self.height
-        width = self.width
-
-        aresta1 = np.full((height, 2), 0.0)
-        aresta2 = np.full((height, 2), 0.0)
-        aresta3 = np.full((height, 2), 0.0)
-
-        # Filling edges with vertices data
-        x, z = float(x3), float(z3)
-        for i in range(y3, y1):
-            if x >= 0 and i >= 0 and x < width and i < height:
-                aresta1[i] = [x, z]
-                x += tx31
-                z += tz31
-
-        x, z = float(x3), float(z3)
-        for i in range(y3, y2):
-            if x >= 0 and i >= 0 and x < width and i < height:
-                aresta2[i] = [x, z]
-                x += tx32
-                z += tz32
-
-        x, z = float(x2), float(z2)
-        for i in range(y2, y1):
-            if x >= 0 and i >= 0 and x < width and i < height:
-                aresta3[i] = [x, z]
-                x += tx21
-                z += tz21
-
-        # Fill the polygon
-        for y in range(y3, y1):
-            if y >= self.height:
-                break
-            if y < 0:
-                continue
-
-            if aresta1[y][0] > aresta2[y][0]:
-                aresta1[y], aresta2[y] = aresta2[y], aresta1[y]
-
-            x_start = int(aresta1[y][0])
-            x_end = int(aresta2[y][0])
-
-            if x_start != x_end:
-                z_start = aresta1[y][1]
-                z_end = aresta2[y][1]
-                dz = (z_end - z_start) / (x_end - x_start)
-
-                z = z_start
-                for x in range(x_start, x_end):
-
-                    if x > 0 and y > 0 and x < width and y < height:
-                        if z > self.z_buffer[y, x]:
-                            self.z_buffer[y, x] = z
-                            self.cor_buffer[y, x] = color
-                    z += dz
-
-    def render(self):
-        
-        default_color = [174, 174, 174]
-        for y in range(self.height):
-            for x in range(self.width):
-                self.cor_buffer[y, x] = default_color
-
-      
-        for obj_idx, o in enumerate(self.objetos):
-            faces = o.get_faces_visible((1, 0, 0))
-            faces = o.get_faces()
-            vertices = self.create_objetos() @ o.get_vertices().T
-            vertices[[0, 1]] /= vertices[-1]
-            vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
-            vertices = vertices.T
-
-            for face_idx, face in enumerate(faces):
-                self.fillpoly(face, vertices, [face_idx * 10, face_idx * 10, 0])
-
-            for y, linha in enumerate(self.cor_buffer):
-                for x, pixel in enumerate(linha):
-                    self.screen.set_at((x, y), (pixel[0], pixel[1], pixel[2]))
-        
-        pg.font.init()
-        font = pg.font.SysFont(None, 24)
-        text = font.render(self.camera_position_str, True, (255, 255, 255))
-        self.screen.blit(text, (10, 10))
-
-
-    def handle_camera_movement(self, keys):
-        speed = 5
-        if keys[pg.K_LEFT]:
-            self.camera_position[0] -= speed
-            # self.camera_look_at[0] -= speed
-        if keys[pg.K_RIGHT]:
-            self.camera_position[0] += speed
-            # self.camera_look_at[0] += speed
-        if keys[pg.K_UP]:
-            self.camera_position[2] -= speed
-            # self.camera_look_at[2] -= speed
-        if keys[pg.K_DOWN]:
-            self.camera_position[2] += speed
-            # self.camera_look_at[2] += speed        
-
-    def run(self):
-        pg.init()
-        display = (self.width, self.height)
-        self.screen = pg.display.set_mode(display, RESIZABLE)
-        clock = pg.time.Clock()
-
-        running = True
-        while running:
-            for event in pg.event.get():
-                if event.type == pg.QUIT:
-                    running = False
-                elif event.type == pg.VIDEORESIZE:
-                    self.width = event.w
-                    self.height = event.h
-                    self.z_buffer = np.full((self.height, self.width), -float('inf'))
-                    self.cor_buffer = np.full((self.height, self.width, 3), (24, 24, 24))
-
-                elif event.type == pg.KEYDOWN:
-                    if event.key == pg.K_ESCAPE:
-                        running = False
-            self.camera_position_str = f"({self.camera_position[0]}, {self.camera_position[1]}, {self.camera_position[2]})"
-
-            keys = pg.key.get_pressed()
-            if any(keys):
-                self.handle_camera_movement(keys)
+def z_buffer(vertices):
+    # Encontre os limites do polígono
+    min_x = min(vertices, key=lambda vertex: vertex[0])[0]
+    max_x = max(vertices, key=lambda vertex: vertex[0])[0]
+    min_y = min(vertices, key=lambda vertex: vertex[1])[1]
+    max_y = max(vertices, key=lambda vertex: vertex[1])[1]
+    
+    # Inicialize o Z-buffer
+    width = max_x - min_x + 1
+    height = max_y - min_y + 1
+    z_buffer = np.full((height, width), float('inf'))
+    
+    # Para cada linha de varredura
+    for y in range(min_y, max_y + 1):
+        intersections = []
+        # Inicialize os valores de x_prev e z_prev
+        x_prev = None
+        z_prev = None
+        # Para cada aresta do polígono
+        for i in range(len(vertices)):
+            j = (i + 1) % len(vertices)
+            # Verifique se a aresta cruza a linha de varredura atual
+            if (vertices[i][1] <= y <= vertices[j][1]) or (vertices[j][1] <= y <= vertices[i][1]):
+                # Calcule a interseção da aresta com a linha de varredura
+                if vertices[i][1] != vertices[j][1]:
+                    x_intersect = vertices[i][0] + (y - vertices[i][1]) * (vertices[j][0] - vertices[i][0]) / (vertices[j][1] - vertices[i][1])
+                    z_intersect = vertices[i][2] + (y - vertices[i][1]) * (vertices[j][2] - vertices[i][2]) / (vertices[j][1] - vertices[i][1])
+                else:
+                    # Se a aresta é horizontal, use o valor do vértice inferior
+                    x_intersect = vertices[i][0]
+                    z_intersect = vertices[i][2]
                 
-            # self.screen.fill(pg.Color('darkslategray'))
-            self.render()
+                # Adicione a interseção à lista de interseções
+                intersections.append((x_intersect, z_intersect))
+        
+        # Classifique as interseções com base em x
+        intersections.sort(key=lambda intersection: intersection[0])
+        
+        # Preencha os pixels entre as interseções
+        for i in range(0, len(intersections), 2):
+            x_start = max(min_x, int(intersections[i][0]))
+            x_end = min(max_x, int(intersections[i + 1][0]))
+            for x in range(x_start, x_end + 1):
+                z_buffer[y - min_y, x - min_x] = min(intersections[i][1], z_buffer[y - min_y, x - min_x])
 
-            pg.display.flip()
-            clock.tick(24)  # Limita o loop a 24 frames por segundo
+    return z_buffer
 
-        pg.quit()
+def plot_z_buffer(z_buffer):
+    plt.imshow(z_buffer, cmap='viridis', origin='lower')
+    plt.colorbar(label='Profundidade')
+    plt.xlabel('Coordenada X')
+    plt.ylabel('Coordenada Y')
+    plt.title('Z-buffer')
+    plt.show()
 
-
-if __name__ == '__main__':
-    polylines = [
-        (((100, 0), (-200, 200), (-100, -100), (100, 0))),
-        (((200, 400), (300, 100), (200, 1), (10, 0)))
-    ]
-    Cena3D().run()
+# Exemplo de uso
+vertices = [(0, 0, 0), (2, 4, 1), (5, 2, 2)]
+z_buffer_result = z_buffer(vertices)
+plot_z_buffer(z_buffer_result)

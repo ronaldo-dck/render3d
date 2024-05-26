@@ -18,13 +18,15 @@ class Cena3D:
         self.cor_buffer = np.full((self.height, self.width, 3), [
             174, 174, 174], dtype=np.uint8)
         for obj in self.objetos:
-            obj.rotacaoX(4)
+            obj.rotacaoX(3)
+
+        self.camera_pos = (-1,0,0)
 
         self.cores_faces = [[(random.uniform(0, 1), random.uniform(
             0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
 
     def create_objetos(self):
-        self.camera = Camera((500, 0, 500), (0, 0, 0), (0, 1, 0))
+        self.camera = Camera(self.camera_pos, (0, 0, 0), (0, 1, 0))
         self.projetion = Projetion().projetion_matrix(150)
         self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -
                                                self.width//2, self.height//2, 0, self.width, 0, self.height)
@@ -111,11 +113,12 @@ class Cena3D:
 
     def render(self):
         for obj_idx, o in enumerate(self.objetos):
-            faces = o.get_faces_visible((1, 0, 0))
-            faces = o.get_faces()
+            faces = o.get_faces_visible(self.camera_pos)
+            # faces = o.get_faces()
+
             vertices = self.create_objetos() @ o.get_vertices().T
             vertices[[0, 1]] /= vertices[-1]
-            vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
+            # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
 
             # vertices = np.array([
@@ -137,18 +140,19 @@ class Cena3D:
             # faces.append(Face(vertices, [1, 4, 5]))
 
             for face_idx, face in enumerate(faces):
-                self.fillpoly(face, vertices, [face_idx*10, face_idx*10, 0])
+                    self.fillpoly(face, vertices, [face_idx*10, face_idx*10, 0])
                 # pg.surfarray.blit_array(self.screen, cores)
 
             for y, linha in enumerate(self.cor_buffer):
                 for x, pixel in enumerate(linha):
                     self.screen.set_at((x, y), (pixel[0], pixel[1], pixel[2]))
-                    # self.screen.blit_array(sel, (pixel[0], pixel[1], pixel[2]))
+                    # pg.display.flip()
+                    # self.screen.blit_array(self.screen, (pixel[0], pixel[1], pixel[2]))
 
     def run(self):
         pg.init()
-        display = (self.width, self.height)
-        self.screen = pg.display.set_mode(display,  RESIZABLE)
+        size = (self.width, self.height)
+        self.screen = pg.display.set_mode(size, display=1,flags= RESIZABLE)
         clock = pg.time.Clock()
 
         running = True

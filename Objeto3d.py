@@ -5,17 +5,22 @@ class Face:
         v0 = np.array(all_vertices[face[0]])
         v1 = np.array(all_vertices[face[1]])
         v2 = np.array(all_vertices[face[2]])
-        normal = np.cross(v1 - v0, v2 - v0)
+        normal = np.cross(v2 - v0, v1 - v0)
+        # print(normal)
         comprimento = np.linalg.norm(normal)
         self.vertices = face
         self.normal = normal / comprimento
         self.centroide = np.mean([v0, v1, v2], axis=0)
 
-    def is_visible(self, observador=(-10, 20, 0)):
+    def is_visible(self, observador):
         O = np.array(observador) - self.centroide
         O_norm = np.linalg.norm(O)
         O_unit = O / O_norm
         angle = np.dot(O_unit, self.normal)
+        # print(self.vertices)
+        # print(self.centroide)
+        # print(self.normal, O_unit)
+        # print(angle)
         return angle > 0
 
     def get_dist(self, observador=(0, 20, 0)) -> int:
@@ -28,15 +33,6 @@ class Objeto3d:
     def __init__(self, polyline: list) -> None:
         self.__polyline = polyline
 
-    def __generate_vertices(self, divisions: int):
-        vertices = []
-        theta = np.linspace(0, 2 * np.pi, divisions, endpoint=False)
-        for x, y in self.__polyline:
-            for angle in theta:
-                y_rot = round(y * np.cos(angle), 2)
-                z = round(y * np.sin(angle), 2)
-                vertices.append([x, y_rot, z])
-        return np.array(vertices)
 
     def rotacaoX(self, segments=4):
         """ Cria um modelo 3D rotacionando uma polilinha em torno do eixo X. """
@@ -135,11 +131,10 @@ class Objeto3d:
 
 
 if __name__ == '__main__':
-    obj1 = Objeto3d([(1, 2), (2, 2)])
+    obj1 = Objeto3d([(0, 10), (20, 20)])
     obj1.rotacaoX(4)
 
-    print("Arestas:", obj1.get_edges())
-    print("Vértices:", np.round(obj1.get_vertices(),1))
-
-    for f in obj1.get_faces():
+    # print("Arestas:", obj1.get_edges())
+    print("Vértices:\n", np.round(obj1.get_vertices(),1))
+    for f in obj1.get_faces_visible((-1, 0, 0)):
         print(f.vertices)
