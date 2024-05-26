@@ -1,103 +1,228 @@
-import pygame
+import pygame as pg
+from pygame.locals import *
+from OpenGL.GL import *
+from OpenGL.GLUT import *
+from OpenGL.GLU import *
+from Objeto3d import Objeto3d, Face
+import random
+from camera import Camera, Projetion
 import numpy as np
 
-# Inicialização do Pygame
-pygame.init()
 
-# Configurações da janela
-width, height = 800, 600
-screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("Desenhando Polígono Preenchido com Z-buffer")
+class Cena3D:
+    def __init__(self, polylines=[((0, 10), (10, 10))]):
+        self.objetos = [Objeto3d(p) for p in polylines]
+        self.width = 1000
+        self.height = 900
+        self.z_buffer = np.full((self.height, self.width), -float('inf'))
+        self.cor_buffer = np.full((self.height, self.width, 3), [
+                                  24, 24, 24], dtype=np.uint8)
+        for obj in self.objetos:
+            obj.rotacaoX(36)
 
-# Cores
-black = (0, 0, 0)
-white = (255, 255, 255)
-red = (255, 0, 0)
+        self.cores_faces = [[(random.uniform(0, 1), random.uniform(
+            0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
 
-# Função para desenhar linha pixel a pixel
-def draw_line(screen, start, end, color):
-    x1, y1 = start
-    x2, y2 = end
-    dx = x2 - x1
-    dy = y2 - y1
-    steps = max(abs(dx), abs(dy))
+    def create_objetos(self):
+        self.camera = Camera((1, 0, 0), (0, 0, 0), (0, 0, 1))
+        self.projetion = Projetion().projetion_matrix(40)
+        self.to_screen = Projetion().to_screen(0, 800, 0, 600, 0, 800, 0, 600)
+        return self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
-    x_inc = dx / steps
-    y_inc = dy / steps
+    def draw_axes(self):
+        glColor3f(1.0, 0.0, 0.0)
+        glBegin(GL_LINES)
+        glVertex3f(0, 0, 0)
+        glVertex3f(1000, 0, 0)
+        glEnd()
 
-    x, y = x1, y1
-    for _ in range(steps):
-        screen.set_at((int(x), int(y)), color)
-        x += x_inc
-        y += y_inc
+        glColor3f(0.0, 1.0, 0.0)
+        glBegin(GL_LINES)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, 1000, 0)
+        glEnd()
 
-# Função para desenhar polígono preenchido usando Z-buffer
-def draw_filled_polygon_z_buffer(screen, vertices, color):
-    # Função para preencher triângulo usando Z-buffer
-    def fill_triangle_z_buffer(v1, v2, v3, color):
-        # Ordenar vértices por y
-        vertices = sorted([v1, v2, v3], key=lambda v: v[1])
-        (x1, y1), (x2, y2), (x3, y3) = vertices
+        glColor3f(0.0, 0.0, 1.0)
+        glBegin(GL_LINES)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, 0, 1000)
+        glEnd()
 
-        # Calcular coeficientes de inclinação inversa para as arestas
-        inv_slope1 = (x2 - x1) / (y2 - y1) if (y2 - y1) != 0 else 0
-        inv_slope2 = (x3 - x1) / (y3 - y1) if (y3 - y1) != 0 else 0
-        inv_slope3 = (x3 - x2) / (y3 - y2) if (y3 - y2) != 0 else 0
+    def draw_wireframe(self):
+        glBegin(GL_LINES)
+        glColor3f(1.0, 0.5, 0.0)
+        for i, faces in enumerate(self.faces):
+            for face in faces:
+                f = Face(self.vertices[i], face)
+                if f.is_visible((1, 10, 0)):
+                    for vertex in face:
+                        glVertex3fv(self.vertices[i][vertex])
+        glEnd()
 
-        # Inicializar Z-buffer
-        z_buffer = np.full((width, height), -float('inf'))
+    def draw_triangles(self):
+        glBegin(GL_TRIANGLES)
+        for i, faces in enumerate(self.faces):
+            for j, face in enumerate(faces):
+                f = Face(self.vertices[i], face)
+                if f.is_visible((1, 10, 0)):
+                    glColor3f(*self.cores_faces[i][j])
+                    for vertex in face:
+                        glVertex3fv(self.vertices[i][vertex])
+        glEnd()
 
-        # Função para preencher linha horizontal usando Z-buffer
-        def fill_horizontal_line_z_buffer(y, x_start, x_end, z_start, z_end):
-            z_inc = (z_end - z_start) / (x_end - x_start) if (x_end - x_start) != 0 else 0
-            for x in range(x_start, x_end + 1):
-                if z_buffer[x, y] < z_start:
-                    screen.set_at((x, y), color)
-                    z_buffer[x, y] = z_start
-                z_start += z_inc
+    def draw(self):
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        self.draw_axes()
+        self.render()
+        pg.display.flip()
 
-        # Preencher a parte superior do triângulo (até a linha do meio)
-        curx1 = curx2 = x1
-        z1 = z2 = z3 = 0  # Profundidade (Z) inicial para os vértices
-        z_inc1 = (0 - z1) / (y2 - y1) if (y2 - y1) != 0 else 0
-        z_inc2 = (0 - z1) / (y3 - y1) if (y3 - y1) != 0 else 0
-        for scanlineY in range(y1, y2 + 1):
-            fill_horizontal_line_z_buffer(scanlineY, int(curx1), int(curx2), z1, z2)
-            curx1 += inv_slope1
-            curx2 += inv_slope2
-            z1 += z_inc1
-            z2 += z_inc2
+    def fillpoly(self, face, all_vertices):
+        i_vertices = face.vertices
+        vertices = sorted(all_vertices[[i_vertices]], key=lambda v: v[1])[0]
 
-        # Preencher a parte inferior do triângulo (da linha do meio para baixo)
-        curx1 = x2
-        z1 = z2
-        z_inc1 = (0 - z1) / (y3 - y2) if (y3 - y2) != 0 else 0
-        for scanlineY in range(y2, y3 + 1):
-            fill_horizontal_line_z_buffer(scanlineY, int(curx1), int(curx2), z1, z2)
-            curx1 += inv_slope3
-            curx2 += inv_slope2
-            z1 += z_inc1
-            z2 += z_inc2
+        (x1, y1), z1 = map(int, vertices[0][:2]), float(vertices[0][2])
+        (x2, y2), z2 = map(int, vertices[1][:2]), float(vertices[1][2])
+        (x3, y3), z3 = map(int, vertices[2][:2]), float(vertices[2][2])
+        # print(vertices)
+        # exit()
+        # Test data
+        # x1, y1, z1 = 93, 251, -22.807
+        # x2, y2, z2 = 198, 241, -20.129
+        # x3, y3, z3 = 125, 107, -21.815
 
-    # Dividir o polígono em triângulos
-    for i in range(1, len(vertices) - 1):
-        v1, v2, v3 = vertices[0], vertices[i], vertices[i + 1]
-        fill_triangle_z_buffer(v1, v2, v3, color)
+        # Calculate inverse slope coefficients for edges
+        tx21 = (x2 - x1) / (y2 - y1) if (y2 - y1) != 0 else 0
+        tx31 = (x3 - x1) / (y3 - y1) if (y3 - y1) != 0 else 0
+        tx32 = (x3 - x2) / (y3 - y2) if (y3 - y2) != 0 else 0
 
-# Vértices do polígono
-vertices = [(400, 100), (300, 400), (500, 400), (600, 200), (500, 100)]
+        tz21 = (z2 - z1) / (y2 - y1) if (y2 - y1) != 0 else 0
+        tz31 = (z3 - z1) / (y3 - y1) if (y3 - y1) != 0 else 0
+        tz32 = (z3 - z2) / (y3 - y2) if (y3 - y2) != 0 else 0
 
-# Loop principal
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+        height = self.height
+        width = self.width
 
-    screen.fill(black)
-    
-    draw_filled_polygon_z_buffer(screen, vertices, white)
+        aresta1 = np.full((height, 2), 0.0)
+        aresta2 = np.full((height, 2), 0.0)
+        aresta3 = np.full((height, 2), 0.0)
 
-    pygame.display.flip()
+        # Filling edges with vertices data
+        x, z = float(x3), float(z3)
+        for i in range(y3, y1):
+             if x >= 0 and i >= 0 and x < width and i < height:
+                aresta1[i] = [x, z]
+                x += tx31
+                z += tz31
 
-pygame.quit()
+        x, z = float(x3), float(z3)
+        for i in range(y3, y2):
+            if x >= 0 and i >= 0 and x < width and i < height:
+                aresta2[i] = [x, z]
+                x += tx32
+                z += tz32
+
+        x, z = float(x2), float(z2)
+        for i in range(y2, y1):
+             if x >= 0 and i >= 0 and x < width and i < height:
+                aresta3[i] = [x, z]
+                x += tx21
+                z += tz21
+
+        # Fill the polygon
+        for y in range(y3, y1):
+            if y >= self.height:
+                break
+            if aresta1[y][0] > aresta2[y][0]:
+                aresta1[y], aresta2[y] = aresta2[y], aresta1[y]
+
+
+
+            x_start = int(aresta1[y][0])
+            x_end = int(aresta2[y][0])
+
+            if x_start != x_end:
+                z_start = aresta1[y][1]
+                z_end = aresta2[y][1]
+                dz = (z_end - z_start) / (x_end - x_start)
+
+                z = z_start
+                for x in range(x_start, x_end):
+                    if x >= 0 and y >= 0 and x < width and y < height:
+                        if z > self.z_buffer[x, y]:
+                            self.z_buffer[x, y] = z
+                            self.cor_buffer[x, y] = [120, 21, 105]
+                    z += dz
+
+    def render(self):
+        for o in self.objetos:
+            # faces = o.get_faces_visible((0, 0, 1))
+            faces = o.get_faces()
+            vertices = self.create_objetos() @ o.get_vertices().T
+            vertices[[0, 1]] /= vertices[-1]
+            vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
+            vertices = vertices.T
+
+            for face in faces:
+                self.fillpoly(face, vertices)
+                # pg.surfarray.blit_array(self.screen, cores)
+
+
+            for y, linha in enumerate(self.cor_buffer):
+                for x, pixel in enumerate(linha):
+                    self.screen.set_at((x, y), (pixel[0], pixel[1], pixel[2]))
+                    # self.screen.blit_array(sel, (pixel[0], pixel[1], pixel[2]))
+
+    def handle_camera_movement(self, keys, camera_speed):
+        if keys[pg.K_LEFT] or keys[pg.K_a]:
+            glTranslatef(-camera_speed, 0, 0)
+        if keys[pg.K_RIGHT] or keys[pg.K_d]:
+            glTranslatef(camera_speed, 0, 0)
+        if keys[pg.K_UP] or keys[pg.K_q]:
+            glTranslatef(0, camera_speed, 0)
+        if keys[pg.K_DOWN] or keys[pg.K_e]:
+            glTranslatef(0, -camera_speed, 0)
+        if keys[pg.K_w]:
+            glTranslatef(0, 0, camera_speed)
+        if keys[pg.K_s]:
+            glTranslatef(0, 0, -camera_speed)
+
+    def run(self):
+        pg.init()
+        display = (self.width, self.height)
+        self.screen = pg.display.set_mode(display,  RESIZABLE)
+        camera_speed = 0.1
+        clock = pg.time.Clock()
+        running = True
+        while running:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    running = False
+                elif event.type == pg.VIDEORESIZE:
+                    self.width = event.w
+                    self.height = event.h
+                    self.z_buffer = np.full((self.height, self.width), -float('inf'))
+                    self.cor_buffer = np.full((self.height, self.width, 3), (24,24,24))
+
+                elif event.type == pg.KEYDOWN:
+                    if event.key == pg.K_ESCAPE:
+                        running = False
+
+            keys = pg.key.get_pressed()
+            self.handle_camera_movement(keys, camera_speed)
+            self.screen.fill(pg.Color('darkslategray'))
+            self.render()
+            self.draw()
+            pg.display.flip()
+            clock.tick(24)  # Limita o loop a 60 frames por segundo
+
+        pg.quit()
+
+
+if __name__ == '__main__':
+    polylines = [
+        # (((1, 0), (-1, 1), (1, 1), (1, 0))),
+        (((100, 0), (-200, 200), (-100, -100), (100, 0))),
+        # Novo objeto adicionado
+        (((200, 400), (300, 100), (200, 1), (10, 0)))
+    ]
+    Cena3D().run()

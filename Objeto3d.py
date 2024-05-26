@@ -115,7 +115,7 @@ class Objeto3d:
         return faces_ordenadas
 
 
-    def get_faces_visible(self, observador = (1,0,0)):
+    def get_faces_visible(self, observador):
         ordem = list()
         for i,f in enumerate(self.__faces):
             if f.is_visible() > 0:
