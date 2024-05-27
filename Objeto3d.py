@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-
+from camera import Camera, Projetion
 
 class Face:
     def __init__(self, all_vertices, face):
@@ -130,20 +130,31 @@ class Objeto3d:
         ordem.sort(key=lambda x: x[1], reverse=True)
 
         faces_ordenadas = [f for _, _, f in ordem]
-        print(len(faces_ordenadas), len(self.__faces))
         return faces_ordenadas
 
 
-    def visualize(self):
+    def create_objetos(self, obs):
+        self.camera = Camera(obs, (0,0,0), (0, 1, 0))
+        self.projetion = Projetion().projetion_matrix(410)
+        self.to_screen = Projetion().to_screen(-800//2, 800//2, -
+                                               800//2, 800//2, 0, 800, 0, 800)
+
+        # self.to_screen = Projetion().to_screen(-8, 8, -6, 6, 0, self.width, 0, self.height)
+
+        return self.to_screen @ self.projetion @ self.camera.camera_matrix()
+
+    def visualize(self, observador=(20,-20,20)):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
         # Plotando vértices
-        vertices = self.get_vertices()
+        vertices = (self.create_objetos(observador) @ self.get_vertices().T)
+        vertices /= vertices[-1]
+        vertices = vertices.T
         ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2])
-
-        # Plotando faces
-        for face in self.__faces:
+        print(vertices)
+        # Plotando apenas as faces visíveis
+        for face in self.get_faces_visible(observador):
             v0, v1, v2 = face.vertices
             tri = Poly3DCollection([[
                 vertices[v0][:3],
@@ -161,9 +172,10 @@ class Objeto3d:
         plt.show()
 
 
+
 if __name__ == '__main__':
-    obj1 = Objeto3d([(0, 10), (20, 20),(20,10), (0, 10)])
-    obj1.rotacaoX(3)
+    obj1 = Objeto3d([(10,10), (15,10)])
+    obj1.rotacaoX(4)
 
     # print("Arestas:", obj1.get_edges())
     print("Vértices:\n", np.round(obj1.get_vertices(),1))

@@ -12,171 +12,177 @@ import numpy as np
 class Cena3D:
     def __init__(self, polylines=[((10, 0), (20, 10))]):
         self.objetos = [Objeto3d(p) for p in polylines]
-        self.width = 620
-        self.height = 620
+        self.width = 800
+        self.height = 800
         self.z_buffer = np.full((self.height, self.width), -float('inf'))
         self.cor_buffer = np.full((self.height, self.width, 3), [
             174, 174, 174], dtype=np.uint8)
         for obj in self.objetos:
             obj.rotacaoX(4)
 
-        self.camera_pos = (-1, 0, 0)
-        self.camera_lookat = (0, 0, 0)
+        self.camera_pos = [20, -20, 20]
+        self.camera_lookat = [0, 0, 0]
+
+        pg.font.init()
+        self.font = pg.font.SysFont(None, 36)
 
         self.__cores_faces = [[(random.uniform(0, 1), random.uniform(
             0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
 
     def create_objetos(self):
         self.camera = Camera(self.camera_pos, self.camera_lookat, (0, 1, 0))
-        self.projetion = Projetion().projetion_matrix(100)
+        self.projetion = Projetion().projetion_matrix(410)
         self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -
-                                               self.width//2, self.height//2, 0, self.width, 0, self.height)
+                                               self.height//2, self.height//2, 0, self.width, 0, self.height)
 
         # self.to_screen = Projetion().to_screen(-8, 8, -6, 6, 0, self.width, 0, self.height)
 
         return self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
-    def fillpoly(self, face, all_vertices, color):
 
+    def fillpoly(self, face, all_vertices, color):
         i_vertices = face.vertices
         selected_vertices = all_vertices[i_vertices]
-        vertices = sorted(selected_vertices, key=lambda v: v[1], reverse=False)
+        vertices = sorted(selected_vertices, key=lambda v: v[1])
+        # vertices = selected_vertices
 
-        (x1, y1), z1 = map(int, vertices[0][:2]), float(vertices[0][2])
-        (x2, y2), z2 = map(int, vertices[1][:2]), float(vertices[1][2])
-        (x3, y3), z3 = map(int, vertices[2][:2]), float(vertices[2][2])
+        (x0, y0), z0 = map(int, vertices[0][:2]), float(vertices[0][2])
+        (x1, y1), z1 = map(int, vertices[1][:2]), float(vertices[1][2])
+        (x2, y2), z2 = map(int, vertices[2][:2]), float(vertices[2][2])
 
-        # Test data
-        # x1, y1, z1 = 93, 251, -22.807
-        # x2, y2, z2 = 198, 241, -20.129
-        # x3, y3, z3 = 125, 107, -21.815
+        arestas = [
+            {
+                'ini': (x0, y0, z0),
+                'fim': (x1, y1, z1),
+                'taxaX': ((x1 - x0) / ((y1 - y0) + 1e-16)),
+                'taxaZ': ((z1 - z0) / ((y1 - y0) + 1e-16))
+            },
+            {
+                'ini': (x1, y1, z1),
+                'fim': (x2, y2, z2),
+                'taxaX': ((x2 - x1) / ((y2 - y1) + 1e-16)),
+                'taxaZ': ((z2 - z1) / ((y2 - y1 + 1e-16)))
+            },
+            {
+                'ini': (x2, y2, z2),
+                'fim': (x0, y0, z0),
+                'taxaX': ((x0 - x2) / ((y0 - y2) + 1e-16)),
+                'taxaZ': ((z0 - z2) / ((y0 - y2) + 1e-16))
+            }
+        ]
 
-        # Calculate inverse slope coefficients for edges
-        tx21 = (x2 - x1) / (y2 - y1) if (y2 - y1) != 0 else 0
-        tx31 = (x3 - x1) / (y3 - y1) if (y3 - y1) != 0 else 0
-        tx32 = (x3 - x2) / (y3 - y2) if (y3 - y2) != 0 else 0
+        arestas.sort(key=lambda x: x['ini'][1])
 
-        tz21 = (z2 - z1) / (y2 - y1) if (y2 - y1) != 0 else 0
-        tz31 = (z3 - z1) / (y3 - y1) if (y3 - y1) != 0 else 0
-        tz32 = (z3 - z2) / (y3 - y2) if (y3 - y2) != 0 else 0
+        # print(arestas)
 
-        height = self.height
-        width = self.width
+        lastIniX = arestas[0]['ini'][0]
+        lastFimX = arestas[0]['ini'][0]
+        lastIniZ = arestas[0]['ini'][2]
+        lastFimZ = arestas[0]['ini'][2]
 
-        aresta1 = np.full((height, 2), 0.0)
-        aresta2 = np.full((height, 2), 0.0)
-        aresta3 = np.full((height, 2), 0.0)
+        swapped = False
+        if (arestas[0]['ini'][0] > arestas[1]['ini'][0]):
+            swapped = True
 
-        # Filling edges with vertices data
-        x, z = float(x3), float(z3)
-        for i in range(y3, y1):
-            if x >= 0 and i >= 0 and x < width and i < height:
-                aresta1[i] = [x, z]
-                x += tx31
-                z += tz31
+        for y in range(arestas[0]['ini'][1], arestas[0]['fim'][1]):
+            lastIniX += arestas[0]['taxaX']
+            lastFimX += arestas[2]['taxaX']
+            lastIniZ += arestas[0]['taxaZ']
+            lastFimZ += arestas[2]['taxaZ']
 
-        x, z = float(x3), float(z3)
-        for i in range(y3, y2):
-            if x >= 0 and i >= 0 and x < width and i < height:
-                aresta2[i] = [x, z]
-                x += tx32
-                z += tz32
+            lastIniX = round(lastIniX)
+            lastFimX = round(lastFimX)
 
-        x, z = float(x2), float(z2)
-        for i in range(y2, y1):
-            if x >= 0 and i >= 0 and x < width and i < height:
-                aresta3[i] = [x, z]
-                x += tx21
-                z += tz21
+            varX = (lastFimX - lastIniX) + 1e-16
+            if varX == 0:
+                deltaZ = 0
+            else:
+                deltaZ = (lastFimZ - lastIniZ) / varX
+            startZ = lastIniZ
 
-        # Fill the polygon
-        for y in range(y3, y1):
-            if y >= self.height:
-                break
-            if y < 0:
-                continue
+            # print(lastIniX, lastFimX)
+            if swapped:
+                for x in range(lastIniX, lastFimX):
+                    self.screen.set_at((x, y), color)
+                    startZ += deltaZ
+            else:
+                for x in range(lastFimX, lastIniX):
+                    self.screen.set_at((x, y), color)
+                    startZ += deltaZ
 
-            if aresta1[y][0] > aresta2[y][0]:
-                aresta1[y], aresta2[y] = aresta2[y], aresta1[y]
+        lastIniZ = arestas[1]['ini'][2]
 
-            x_start = int(aresta1[y][0])
-            x_end = int(aresta2[y][0])
+        for y in range(arestas[1]['ini'][1], arestas[1]['fim'][1]):
+            lastIniX += arestas[1]['taxaX']
+            lastFimX += arestas[2]['taxaX']
+            lastIniZ += arestas[1]['taxaZ']
+            lastFimZ += arestas[2]['taxaZ']
 
-            if x_start != x_end:
-                z_start = aresta1[y][1]
-                z_end = aresta2[y][1]
-                dz = (z_end - z_start) / (x_end - x_start)
+            lastIniX = round(lastIniX)
+            lastFimX = round(lastFimX)
 
-                z = z_start
-                for x in range(x_start, x_end):
+            varX = (lastFimX - lastIniX) + 1e-16
+            if varX == 0:
+                deltaZ = 0
+            else:
+                deltaZ = (lastFimZ - lastIniZ) / varX
+            startZ = lastIniZ
 
-                    if x > 0 and y > 0 and x < width and y < height:
-                        if z > self.z_buffer[y, x]:
-                            self.z_buffer[y, x] = z
-                            self.cor_buffer[y, x] = color
-                    z += dz
+            if swapped:
+                for x in range(lastIniX, lastFimX):
+                    self.screen.set_at((x, y), color)
+                    startZ += deltaZ
+            else:
+                for x in range(lastFimX, lastIniX):
+                    self.screen.set_at((x, y), color)
+                    startZ += deltaZ
+
+
 
     def render(self):
         for obj_idx, o in enumerate(self.objetos):
-            faces = o.get_faces_visible(self.camera_pos)
-            # faces = o.get_faces()
+            # faces = o.get_faces_visible(self.camera_pos)
+            faces = o.get_faces()
 
             vertices = self.create_objetos() @ o.get_vertices().T
             vertices[[0, 1]] /= vertices[-1]
             # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
+            # print(np.round(np.array(vertices), 1))
+            # print(np.round(o.get_vertices(), 1))
+            # print(np.array([f.vertices for f in faces ]))
 
-            # vertices = np.array(
-            #     [
-            #         [21.2, 34.1, 18.8, 5.9,	20],
-            #         [0.7,	3.4,	5.6,	2.9,	20.9],
-            #         [42.3,	27.2,	14.6,	29.7,	31.6],
-            #     ]
-            # ).T
-            # faces = list()
-            # faces.append(Face(vertices, [0, 1, 4]))
-            # faces.append(Face(vertices, [1, 2, 4]))
-            # faces.append(Face(vertices, [2, 3, 4]))
-            # faces.append(Face(vertices, [3, 0, 4]))
-
-            # vertices = np.array([
-            #     [93, 251, -22.807],  # vértice 0
-            #     [198, 241, -20.129],  # vértice 1
-            #     [125, 107, -21.815],  # vértice 2
-            #     [400, 100, -19.815],  # vértice 3 (novo)
-            #     [400, 500, -8.815],  # vértice 4 (novo)
-            #     [200, 550, -17.815]  # vértice 5 (novo)
-            # ])
-            # faces = list()
-
-            # faces.append(
-            #     Face(vertices, [0, 1, 2])
-            # )
-            # faces.append(
-            #     Face(vertices, [3, 4, 5])
-            # )
-            # faces.append(Face(vertices, [1, 4, 5]))
-
-            (randomColor1, randomColor2, randomColor3) = (
-                random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
             
             for face_idx, face in enumerate(faces):
                 # points = vertices[face.vertices].T[:2].T
                 # pg.draw.polygon(self.screen, (255, 0, 0), points)
-                self.fillpoly(face, vertices, [
-                            face_idx*10*randomColor1, face_idx*40*randomColor2, face_idx*30*randomColor3])
+                self.fillpoly(face, vertices, (200//(face_idx+1),100//(face_idx+1),0))
                 # pg.surfarray.blit_array(self.screen, cores)
 
-            for y, linha in enumerate(self.cor_buffer):
-                for x, pixel in enumerate(linha):
-                    self.screen.set_at((x, y), (pixel[0], pixel[1], pixel[2]))
-                    # pg.display.flip()
+            # for y, linha in enumerate(self.cor_buffer):
+            #     for x, pixel in enumerate(linha):
+            #         self.screen.set_at((x, y), (pixel[0], pixel[1], pixel[2]))
+            #         # pg.display.flip()
                     # self.screen.blit_array(self.screen, (pixel[0], pixel[1], pixel[2]))
+    def draw_mouse_coords(self, screen, x, y):
+        coord_text = f"X: {x}, Y: {y}"
+        text_surf = self.font.render(coord_text, True, (0, 0, 0))
+        screen.blit(text_surf, (10, 70))
+
+    def draw_cam_coords(self, screen, x, y, z):
+        coord_text = f"X: {x}, Y: {y}, Z: {z}"
+        text_surf = self.font.render(coord_text, True, (100, 100, 100))
+        screen.blit(text_surf, (10, 140))
+
+    def draw_lookat_coords(self, screen, x, y, z):
+        coord_text = f"X: {x}, Y: {y}, Z: {z}"
+        text_surf = self.font.render(coord_text, True, (100, 100, 200))
+        screen.blit(text_surf, (10, 105))
 
     def run(self):
         pg.init()
         size = (self.width, self.height)
-        self.screen = pg.display.set_mode(size, display=0, flags=RESIZABLE)
+        self.screen = pg.display.set_mode(size, display=1, flags=RESIZABLE)
         clock = pg.time.Clock()
 
         running = True
@@ -195,12 +201,43 @@ class Cena3D:
                 elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
                         running = False
+                    elif event.key == pg.K_a:
+                        self.camera_pos[0] -= 1
+                    elif event.key == pg.K_d:
+                        self.camera_pos[0] += 1
+                    elif event.key == pg.K_w:
+                        self.camera_pos[2] += 1
+                    elif event.key == pg.K_s:
+                        self.camera_pos[2] -= 1
+                    elif event.key == pg.K_q:
+                        self.camera_pos[1] += 1
+                    elif event.key == pg.K_e:
+                        self.camera_pos[1] -= 1
+                    elif event.key == pg.K_UP:
+                        self.camera_lookat[1] += 1
+                    elif event.key == pg.K_DOWN:
+                        self.camera_lookat[1] -= 1
+                    elif event.key == pg.K_LEFT:
+                        self.camera_lookat[0] -= 1
+                    elif event.key == pg.K_RIGHT:
+                        self.camera_lookat[0] += 1
 
+
+                # Obtém a posição atual do mouse
+            mouse_x, mouse_y = pg.mouse.get_pos()
+
+
+            # Cria uma superfície com as coordenadas do mouse
+
+        # Define a posição onde o texto será renderizado
             self.screen.fill(pg.Color('darkslategray'))
             self.render()
+            self.draw_mouse_coords(self.screen, mouse_x, mouse_y)
+            self.draw_cam_coords(self.screen, self.camera_pos[0], self.camera_pos[1], self.camera_pos[2])
+            self.draw_lookat_coords(self.screen, self.camera_lookat[0], self.camera_lookat[1], self.camera_lookat[2])
 
             pg.display.flip()
-            clock.tick(24)  # Limita o loop a 60 frames por segundo
+            clock.tick(4)  # Limita o loop a 60 frames por segundo
 
         pg.quit()
 
@@ -208,8 +245,9 @@ class Cena3D:
 if __name__ == '__main__':
     polylines = [
         # (((1, 0), (-1, 1), (1, 1), (1, 0))),
-        # (((100, 0), (-200, 200), (-100, -100), (100, 0))),
+        # (((100, 0), (-200, 200), (-100, -100), (100, 0)))
         # Novo objeto adicionado
-        ((-10, 10), (10, 10))
+        ((10,10),(15,10))
+        # ((-10, 10), (10, 10))
     ]
     Cena3D(polylines).run()

@@ -2,6 +2,7 @@ import pygame
 import sys
 
 from Objeto3d import Objeto3d
+from CenaWireframe import CenaWireframe
 
 class Cena2D:
     def __init__(self):
@@ -35,17 +36,8 @@ class Cena2D:
         pygame.draw.line(screen, (0, 0, 0), (self.DRAW_AREA_X + self.DRAW_AREA_WIDTH, self.DRAW_AREA_Y), (self.DRAW_AREA_X + self.DRAW_AREA_WIDTH, self.DRAW_AREA_Y + self.DRAW_AREA_HEIGHT), 2)
         pygame.draw.line(screen, (0, 0, 0), (self.DRAW_AREA_X, self.DRAW_AREA_Y + self.DRAW_AREA_HEIGHT), (self.DRAW_AREA_X + self.DRAW_AREA_WIDTH, self.DRAW_AREA_Y + self.DRAW_AREA_HEIGHT), 2)
 
-    def create3dobj(self):
-        objetos = list()
-        for p in self.polylines:
-            o = Objeto3d(p)
-            o.rotacaoX(4)
-            objetos.append(0)
-
-        return objetos
-
     def run(self):
-        
+
         pygame.init()
         button_start_rect = pygame.Rect(10, 10, 150, 50)
         button_end_rect = pygame.Rect(170, 10, 150, 50)
@@ -72,9 +64,10 @@ class Cena2D:
                     elif self.drawing and self.DRAW_AREA_X <= mouse_pos[0] <= self.DRAW_AREA_X + self.DRAW_AREA_WIDTH and self.DRAW_AREA_Y <= mouse_pos[1] <= self.DRAW_AREA_Y + self.DRAW_AREA_HEIGHT:
                         self.current_polyline.append(mouse_pos)
                     elif button_3d.collidepoint(mouse_pos):
-                        return self.polylines
+                        return "3D", self.polylines
                     elif button_2d.collidepoint(mouse_pos):
-                        return "2D"
+                        cena = CenaWireframe(self.current_polyline)
+                        cena.run()
                     elif button_close_polyline.collidepoint(mouse_pos):
                         self.current_polyline.append(self.current_polyline[0])
                         self.polylines.append(self.current_polyline.copy())

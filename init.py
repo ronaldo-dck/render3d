@@ -2,6 +2,7 @@ import pygame
 import sys
 from Cena2D import Cena2D
 from Cena3D import Cena3D
+from CenaWireframe import CenaWireframe
 
 
 
@@ -18,7 +19,6 @@ class CenaPrincipal:
     def __init__(self, screen):
         self.screen = screen
         self.cena1 = Cena2D()
-        self.cena2 = Cena3D()
         self.current_cena = self.cena1
 
     def trocar_cena(self):
@@ -28,7 +28,12 @@ class CenaPrincipal:
             self.current_cena = self.cena1
 
     def update(self):
-        self.cena2 = Cena3D(self.current_cena.run())
+        # self.cena2 = Cena3D(self.current_cena.run())
+        retorno, poli = self.current_cena.run()
+        if retorno == '2D':
+            self.cena2 = CenaWireframe(poli)
+        else:
+            self.cena2 = Cena3D(poli)
         self.trocar_cena()
 
     def draw(self, surface):
