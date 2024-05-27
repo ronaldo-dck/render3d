@@ -66,7 +66,7 @@ class Cena2D:
                     elif button_3d.collidepoint(mouse_pos):
                         return "3D", self.polylines
                     elif button_2d.collidepoint(mouse_pos):
-                        cena = CenaWireframe(self.current_polyline)
+                        cena = CenaWireframe(self.polylines)
                         cena.run()
                     elif button_close_polyline.collidepoint(mouse_pos):
                         self.current_polyline.append(self.current_polyline[0])
