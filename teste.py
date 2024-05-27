@@ -1,224 +1,255 @@
-import pygame
-from pygame.locals import *
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from camera import Camera, Projetion
 
-WIDTH, HEIGHT = 800, 600
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
+class Segment:
+    def __init__(self, p1, p2):
+        self.p1 = p1
+        self.p2 = p2
 
-z_buffer = np.full((HEIGHT, WIDTH), -float('inf'))
+class Face:
+    def __init__(self, all_vertices, face):
+        v0 = np.array(all_vertices[face[0]])
+        v1 = np.array(all_vertices[face[1]])
+        v2 = np.array(all_vertices[face[2]])
+        normal = np.cross(v2 - v1, v0 - v1)
+        comprimento = np.linalg.norm(normal)
+        self.vertices = face
+        self.normal = normal / comprimento
+        self.centroide = np.mean([v0, v1, v2], axis=0)
+
+    def is_visible(self, observador):
+        O = np.array(observador) - self.centroide
+        O_norm = np.linalg.norm(O)
+        O_unit = O / O_norm
+        angle = np.dot(O_unit, self.normal)
+        return angle > 0
+
+    def get_dist(self, observador=(0, 20, 0)) -> int:
+        diferenca = self.centroide - np.array(observador)
+        distancia = np.linalg.norm(diferenca)
+        return distancia
+
+class Objeto3d:
+    def __init__(self, polyline: list) -> None:
+        self.__polyline = polyline
+
+    def rotacaoX(self, segments=4):
+        polyline = [[x, y, 0] for x, y in self.__polyline]
+        vertices = []
+        faces = []
+        edges = []
+
+        for i in range(segments):
+            angle = (360 / segments) * i
+            for point in polyline:
+                rotated_point = self.rotate_point(point, angle)
+                vertices.append(rotated_point)
+
+        for i in range(segments):
+            for j in range(len(polyline) - 1):
+                p1 = i * len(polyline) + j
+                p2 = ((i + 1) % segments) * len(polyline) + j
+                p3 = ((i + 1) % segments) * len(polyline) + (j + 1)
+                p4 = i * len(polyline) + (j + 1)
+
+                faces.append(Face(vertices, [p1, p2, p3]))
+                faces.append(Face(vertices, [p1, p3, p4]))
+
+                edges.append(Segment(p1, p2))
+                edges.append(Segment(p2, p3))
+                edges.append(Segment(p3, p4))
+                edges.append(Segment(p4, p1))
+                edges.append(Segment(p1, p3))
+
+        self.__vertices = np.array(vertices)
+        self.__faces = np.array(faces)
+        self.__edges = np.array(edges)
+
+    def rotate_point(self, point, angle, axis='x'):
+        angle_rad = np.radians(angle)
+        rotation_matrix = np.array([
+            [1, 0, 0],
+            [0, np.cos(angle_rad), -np.sin(angle_rad)],
+            [0, np.sin(angle_rad), np.cos(angle_rad)]
+        ])
+        return np.dot(rotation_matrix, point)
+
+    def get_faces(self):
+        return self.__faces
+
+    def set_vertices(self,vertices):
+        self.__vertices = vertices
+
+    def get_edges(self):
+        return self.__edges
+
+    def get_vertices(self):
+        ones_column = np.ones((self.__vertices.shape[0], 1))
+        new_array = np.hstack((self.__vertices, ones_column))
+        # print(self.__vertices.shape, new_array.shape)
+        return self.__vertices
+
+    def get_centro_box_envolvente(self):
+        vertices_array = np.array(self.__vertices)
+        x_min, y_min, z_min = np.min(vertices_array, axis=0)
+        x_max, y_max, z_max = np.max(vertices_array, axis=0)
+        centro_x = (x_min + x_max) / 2
+        centro_y = (y_min + y_max) / 2
+        centro_z = (z_min + z_max) / 2
+        return (centro_x, centro_y, centro_z)
+
+    def pintor(self, observador=(1, 0, 0)):
+        ordem = list()
+        for i, f in enumerate(self.__faces):
+            ordem.append([i, f.get_dist(observador)])
+        ordem.sort(key=lambda x: x[1], reverse=True)
+        faces_ordenadas = [i for i, _ in ordem]
+        return faces_ordenadas
+
+    def get_faces_visible(self, observador):
+        ordem = list()
+        for i, f in enumerate(self.__faces):
+            if f.is_visible(observador):
+                ordem.append([i, f.get_dist(observador), f])
+        ordem.sort(key=lambda x: x[1], reverse=True)
+        faces_ordenadas = [f for _, _, f in ordem]
+        return faces_ordenadas
+
+    def create_objetos(self, obs):
+        self.camera = Camera(obs, (0,0,0), (0, 1, 0))
+        self.projetion = Projetion().projetion_matrix(410)
+        self.to_screen = Projetion().to_screen(-800//2, 800//2, -800//2, 800//2, 0, 800, 0, 800)
+        return self.to_screen @ self.projetion @ self.camera.camera_matrix()
+
+    def visualize(self, observador=(20,-20,20)):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        vertices = (self.create_objetos(observador) @ self.get_vertices().T)
+        vertices /= vertices[-1]
+
+        vertices = vertices.T
+        ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2])
+        for face in self.get_faces_visible(observador):
+            v0, v1, v2 = face.vertices
+            tri = Poly3DCollection([[
+                vertices[v0][:3],
+                vertices[v1][:3],
+                vertices[v2][:3]
+            ]])
+            tri.set_color((0, 1, 0, 0.5))
+            tri.set_edgecolor('k')
+            ax.add_collection3d(tri)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        plt.show()
 
 
-def oldfillpoly(face, all_vertices, color):
-    i_vertices = face
-    selected_vertices = all_vertices
-    vertices = sorted(selected_vertices, key=lambda v: v[1], reverse=True)
-
-    (x1, y1), z1 = map(int, vertices[0][:2]), float(vertices[0][2])
-    (x2, y2), z2 = map(int, vertices[1][:2]), float(vertices[1][2])
-    (x3, y3), z3 = map(int, vertices[2][:2]), float(vertices[2][2])
-
-    # Test data
-    # x1, y1, z1 = 93, 251, -22.807
-    # x2, y2, z2 = 198, 241, -20.129
-    # x3, y3, z3 = 125, 107, -21.815
-
-    # Calculate inverse slope coefficients for edges
-    tx21 = (x2 - x1) / (y2 - y1) if (y2 - y1) != 0 else 0
-    tx31 = (x3 - x1) / (y3 - y1) if (y3 - y1) != 0 else 0
-    tx32 = (x3 - x2) / (y3 - y2) if (y3 - y2) != 0 else 0
-
-    tz21 = (z2 - z1) / (y2 - y1) if (y2 - y1) != 0 else 0
-    tz31 = (z3 - z1) / (y3 - y1) if (y3 - y1) != 0 else 0
-    tz32 = (z3 - z2) / (y3 - y2) if (y3 - y2) != 0 else 0
-
-    height = HEIGHT
-    width = WIDTH
-
-    aresta1 = np.full((height, 2), 0.0)
-    aresta2 = np.full((height, 2), 0.0)
-    aresta3 = np.full((height, 2), 0.0)
-
-    # Filling edges with vertices data
-    x, z = float(x3), float(z3)
-    for i in range(y3, y1):
-        if x >= 0 and i >= 0 and x < width and i < height:
-            aresta1[i] = [x, z]
-            x += tx31
-            z += tz31
-
-        x, z = float(x3), float(z3)
-        for i in range(y3, y2):
-            if x >= 0 and i >= 0 and x < width and i < height:
-                aresta2[i] = [x, z]
-                x += tx32
-                z += tz32
-
-        x, z = float(x2), float(z2)
-        for i in range(y2, y1):
-            if x >= 0 and i >= 0 and x < width and i < height:
-                aresta3[i] = [x, z]
-                x += tx21
-                z += tz21
-
-        # Fill the polygon
-        for y in range(y3, y1):
-            if y >= HEIGHT:
-                break
-            if y < 0:
+        
+def render_poly(poly, z_buffer, color_buffer):
+    width, height = z_buffer.shape[1], z_buffer.shape[0]
+    for face in poly.get_faces():
+        scanline_edges = []
+        face_indices = face.vertices
+        v0, v1, v2 = [poly.get_vertices()[i][:3] for i in face_indices]
+        v = v1 - v0
+        u = v2 - v0
+        n = np.cross(v, u)
+        a, c = n[0], n[2]
+        z_delta = -(a / c)
+        lowest_y = float('inf')
+        highest_y = float('-inf')
+        for i in range(len(face_indices)):
+            p1 = poly.get_vertices()[face_indices[i % 3]][:3]
+            p2 = poly.get_vertices()[face_indices[(i + 1) % 3]][:3]
+            if p2[1] == p1[1]:
+                highest_x, lowest_x = int(max(p1[0], p2[0])), int(min(p1[0], p2[0]))
+                const_y = int(p1[1])
+                if const_y < 0 or const_y >= height:
+                    continue
+                start_z = p1[2] if p1[0] > p2[0] else p2[2]
+                for j in range(lowest_x, highest_x + 1):
+                    if j < 0 or j >= width:
+                        continue
+                    if z_buffer[const_y, j] > start_z:
+                        z_buffer[const_y, j] = start_z
+                        color_buffer[const_y, j] = poly.get_color()
+                    start_z += z_delta
                 continue
 
-            if aresta1[y][0] > aresta2[y][0]:
-                aresta1[y], aresta2[y] = aresta2[y], aresta1[y]
+            if p1[1] < p2[1]:
+                p1, p2 = p2, p1
 
-            x_start = int(aresta1[y][0])
-            x_end = int(aresta2[y][0])
+            edge = {
+                'max_y': int(p1[1]), 'max_y_x': int(p1[0]), 'max_y_z': p1[2],
+                'min_y': int(p2[1]), 'min_y_x': int(p2[0]), 'min_y_z': p2[2],
+                'x_y_delta': (p1[0] - p2[0]) / (p1[1] - p2[1]),
+                'z_y_delta': (p1[2] - p2[2]) / (p1[1] - p2[1])
+            }
 
-            if x_start != x_end:
-                z_start = aresta1[y][1]
-                z_end = aresta2[y][1]
-                dz = (z_end - z_start) / (x_end - x_start)
+            if edge['min_y'] < lowest_y:
+                lowest_y = edge['min_y']
+            if edge['max_y'] > highest_y:
+                highest_y = edge['max_y']
 
-                z = z_start
-                for x in range(x_start, x_end):
+            scanline_edges.append(edge)
 
-                    if x > 0 and y > 0 and x < width and y < height:
-                        screen.set_at((x, y), color)
-                    z += dz
+        scanline_edges.sort(key=lambda edge: edge['min_y'])
+        current_y = int(lowest_y)
+        end_y = int(highest_y)
+        active_edges = []
 
-# Função fillpoly modificada para funcionar com pygame
+        while current_y <= end_y:
+            for j in range(len(scanline_edges) - 1, -1, -1):
+                if scanline_edges[j]['min_y'] == current_y:
+                    active_edge = {
+                        'min_y_x': scanline_edges[j]['min_y_x'], 'min_y_z': scanline_edges[j]['min_y_z'],
+                        'y_max': scanline_edges[j]['max_y'], 'y_min': scanline_edges[j]['min_y'],
+                        'm_inversed': scanline_edges[j]['x_y_delta'], 'm_z_inversed': scanline_edges[j]['z_y_delta']
+                    }
+                    active_edges.append(active_edge)
+                    del scanline_edges[j]
 
+            for j in range(len(active_edges) - 1, -1, -1):
+                if current_y == active_edges[j]['y_max']:
+                    del active_edges[j]
 
-def fillpoly(screen, face, all_vertices, color):
-    selected_vertices = all_vertices
-    vertices = sorted(selected_vertices, key=lambda v: v[1])
+            if len(active_edges) < 2:
+                current_y += 1
+                continue
 
-    # Definindo uma profundidade padrão caso não haja uma coordenada z para algum vértice
-    # for vertex in vertices:
-    #     if len(vertex) < 3:
-    #         vertex.append(0)  # Profundidade padrão é 0 se não for fornecida
+            active_edges.sort(key=lambda edge: edge['min_y_x'])
+            for i in range(0, len(active_edges) - 1, 2):
+                x_start = int(active_edges[i]['min_y_x'])
+                x_end = int(active_edges[i + 1]['min_y_x'])
+                z_start = active_edges[i]['min_y_z']
+                z_delta = (active_edges[i + 1]['min_y_z'] - active_edges[i]['min_y_z']) / (x_end - x_start)
+                for j in range(x_start, x_end):
+                    if j < 0 or j >= z_buffer.shape[1] or current_y < 0 or current_y >= z_buffer.shape[0]:
+                        continue
+                    if z_buffer[current_y, j] > z_start:
+                        z_buffer[current_y, j] = z_start
+                        color_buffer[current_y, j] = [0, 255, 0]  # Define a cor para verde
+                    z_start += z_delta
 
-    (x0, y0), z0 = map(int, vertices[0][:2]), float(vertices[0][2])
-    (x1, y1), z1 = map(int, vertices[1][:2]), float(vertices[1][2])
-    (x2, y2), z2 = map(int, vertices[2][:2]), float(vertices[2][2])
+            for edge in active_edges:
+                edge['min_y_x'] += edge['m_inversed']
+                edge['min_y_z'] += edge['m_z_inversed']
 
-    arestas = [
-        {
-            'ini': (x0, y0, z0),
-            'fim': (x1, y1, z1),
-            'taxaX': ((x1 - x0) / (y1 - y0)),
-            'taxaZ': ((z1 - z0) / (y1 - y0))
-        },
-        {
-            'ini': (x1, y1, z1),
-            'fim': (x2, y2, z2),
-            'taxaX': ((x2 - x1) / (y2 - y1)),
-            'taxaZ': ((z2 - z1) / (y2 - y1))
-        },
-        {
-            'ini': (x2, y2, z2),
-            'fim': (x0, y0, z0),
-            'taxaX': ((x0 - x2) / (y0 - y2)),
-            'taxaZ': ((z0 - z2) / (y0 - y2))
-        }
-    ]
-
-    arestas.sort(key=lambda x: x['ini'][1])
-
-    # print(arestas)
-
-    lastIniX = arestas[0]['ini'][0]
-    lastFimX = arestas[0]['ini'][0]
-    lastIniZ = arestas[0]['ini'][2]
-    lastFimZ = arestas[0]['ini'][2]
-
-    swapped = False
-    if (arestas[0]['ini'][0] > arestas[1]['ini'][0]):
-        swapped = True
-
-    for y in range(arestas[0]['ini'][1], arestas[0]['fim'][1]):
-        lastIniX += arestas[0]['taxaX']
-        lastFimX += arestas[2]['taxaX']
-        lastIniZ += arestas[0]['taxaZ']
-        lastFimZ += arestas[2]['taxaZ']
-
-        lastIniX = round(lastIniX)
-        lastFimX = round(lastFimX)
-
-        varX = (lastFimX - lastIniX) + 1e-16
-        deltaZ = (lastFimZ - lastIniZ) / varX
-        startZ = lastIniZ
-
-        print(lastIniX, lastFimX)
-        if swapped:
-            for x in range(lastIniX, lastFimX):
-                screen.set_at((x, y), color)
-                startZ += deltaZ
-        else:
-            for x in range(lastFimX, lastIniX):
-                screen.set_at((x, y), color)
-                startZ += deltaZ
-
-    lastIniZ = arestas[1]['ini'][2]
-
-    for y in range(arestas[1]['ini'][1], arestas[1]['fim'][1]):
-        lastIniX += arestas[1]['taxaX']
-        lastFimX += arestas[2]['taxaX']
-        lastIniZ += arestas[1]['taxaZ']
-        lastFimZ += arestas[2]['taxaZ']
-
-        lastIniX = round(lastIniX)
-        lastFimX = round(lastFimX)
-
-        varX = (lastFimX - lastIniX) + 1e-16
-        deltaZ = (lastFimZ - lastIniZ) / varX
-        startZ = lastIniZ
-
-        if swapped:
-            for x in range(lastIniX, lastFimX):
-                screen.set_at((x, y), color)
-                startZ += deltaZ
-        else:
-            for x in range(lastFimX, lastIniX):
-                screen.set_at((x, y), color)
-                startZ += deltaZ
+            current_y += 1
 
 
-# Definições de cor e tamanho da tela
+if __name__ == '__main__':
+    width, height = 800, 800
+    z_buffer = np.full((height, width), float('inf'))
+    color_buffer = np.zeros((height, width, 3), dtype=np.uint8)
 
-# Inicialização do Pygame
-pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Teste de fillpoly")
+    obj1 = Objeto3d([(0, 100), (150, 500), (200,120)])
+    obj1.rotacaoX(30)
 
-# Desenhar um triângulo na tela
-triangle_vertices = [(100, 100, 20), (200, 200, 32), (350, 150, 54)]
-triangle_vertices_a = [(100, 100), (200, 200), (350, 150)]
-pygame.draw.polygon(screen, WHITE, triangle_vertices_a, 1)
-fillpoly(screen, [0, 1, 2], triangle_vertices, RED)
+    render_poly(obj1, z_buffer, color_buffer)
 
-triangle_vertices1 = [(100, 100, 20), (200, 200, 32), (50, 150, 54)]
-triangle_vertices1_a = [(100, 100), (200, 200), (50, 150)]
-pygame.draw.polygon(screen, WHITE, triangle_vertices1_a, 1)
-fillpoly(screen, [0, 1, 2], triangle_vertices1, GREEN)
-
-# Preencher o triângulo com a função fillpoly
-# oldfillpoly(screen, triangle_vertices, GREEN)
-
-# Loop principal
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            running = False
-        elif event.type == MOUSEMOTION:  # Captura o evento de movimento do mouse
-            mouseX, mouseY = pygame.mouse.get_pos()  # Obtém a posição atual do mouse
-            # Exibe a posição do mouse na janela do console
-            print("Mouse position:", mouseX, mouseY)
-
-    pygame.display.flip()
-
-# Encerramento do Pygame
-pygame.quit()
+    plt.imshow(color_buffer)
+    plt.show()

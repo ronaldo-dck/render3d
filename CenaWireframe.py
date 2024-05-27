@@ -123,4 +123,4 @@ if __name__ == '__main__':
         Objeto3d(((1,0),(-2, 2), (-1, -1), (1, 0))),
         Objeto3d(((-2,0),(-3, 1), (-2, 1), (-2, 0)))  # Novo objeto adicionado
     ]
-    Cena3D(objetos).run()
+    CenaWireframe(objetos).run()
