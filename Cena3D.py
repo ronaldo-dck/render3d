@@ -11,7 +11,7 @@ import numpy as np
 
 
 class Cena3D:
-    def __init__(self, polylines=[((10, 0), (20, 10))]):
+    def __init__(self, polylines=[((220, 400), (600, 200), (220, 400))]):
         self.objetos = [Objeto3d(p) for p in polylines]
         self.width = 800
         self.height = 800
@@ -37,8 +37,8 @@ class Cena3D:
             self.projetion = np.array([
                 [1,0,0,0],
                 [0,1,0,0],
-                [0,0,0,0],
-                [0,0,0,0]
+                [0,0,1,0],
+                [0,0,0,1]
             ])
         self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -
                                                self.height//2, self.height//2, 0, self.width, 0, self.height)
@@ -348,10 +348,11 @@ class Cena3D:
             new_array = np.hstack((vertices, ones_column))
 
             vertices = self.create_objetos() @ new_array.T[:4]
-            print(vertices)
-            vertices[[0, 1]] /= vertices[-1]
+            if not self.axis:
+                vertices[[0, 1]] /= vertices[-1]
             # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
+            print(vertices)
 
             # vertices = np.array([
             #     [100,100, 32],
@@ -459,4 +460,4 @@ if __name__ == '__main__':
         ((100, 100), (150, 100))
         # ((-10, 10), (10, 10))
     ]
-    Cena3D(polylines).run()
+    Cena3D().run()
