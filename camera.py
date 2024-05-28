@@ -105,7 +105,7 @@ class Projetion:
 
 
 if __name__ == '__main__':
-    camera = Camera((25, 15, 80), (20, 10, 25), (0, 1, 0))
+    camera = Camera((30, 50, 300), (2, -4, 3), (0, 1, 0))
     print(np.round(camera.rotate_matrix(), 3))
     print()
     print(camera.translate_matrix())
@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
     print(np.round(
         Projetion().to_screen(
-            -8, 8, -6, 6, 0, 319, 0, 239
+            -40, 8, -6, 6, 0, 319, 0, 239
         ), 3
     )
     )

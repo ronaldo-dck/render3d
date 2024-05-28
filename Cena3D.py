@@ -21,7 +21,7 @@ class Cena3D:
             174, 174, 174], dtype=np.uint8)
         for obj in self.objetos:
             obj.rotacaoX(6)
-        self.axis = False
+        self.axis = True
         self.camera_pos = [-1,0, 0]
         self.camera_lookat = [0, 0, 0]
 
