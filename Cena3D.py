@@ -11,6 +11,7 @@ import luz
 import numpy as np
 
 
+
 class Cena3D:
     def __init__(self, polylines=[((220, 400), (600, 200), (220, 400))]):
         self.objetos = [Objeto3d(p) for p in polylines]
@@ -265,39 +266,161 @@ class Cena3D:
                 z += deltaZ
 
 
+    def guro(self, face, all_vertices, cor_v0, cor_v1, cor_v2):
+        vertices = all_vertices[face.vertices]
+        vertices = sorted(vertices, key=lambda v: v[1])
+
+        v0 = {
+            'x': vertices[0][0],
+            'y': vertices[0][1],
+            'z': vertices[0][2],
+            'color': cor_v0
+        }
+        v1 = {
+            'x': vertices[1][0],
+            'y': vertices[1][1],
+            'z': vertices[1][2],
+            'color': cor_v1
+        }
+        v2 = {
+            'x': vertices[2][0],
+            'y': vertices[2][1],
+            'z': vertices[2][2],
+            'color': cor_v2
+        }
+
+        arestas = [
+            {
+                'ini': v0,
+                'fim': v1,
+                'taxa': (v1['x'] - v0['x']) / (v1['y'] - v0['y']),
+                'taxaZ': (v1['z'] - v0['z']) / (v1['y'] - v0['y']),
+                'taxaColor': [(v1['color'][i] - v0['color'][i]) / (v1['y'] - v0['y']) for i in range(3)]
+            },
+            {
+                'ini': v1,
+                'fim': v2,
+                'taxa': (v2['x'] - v1['x']) / (v2['y'] - v1['y']),
+                'taxaZ': (v2['z'] - v1['z']) / (v2['y'] - v1['y']),
+                'taxaColor': [(v2['color'][i] - v1['color'][i]) / (v2['y'] - v1['y']) for i in range(3)]
+            },
+            {
+                'ini': v2,
+                'fim': v0,
+                'taxa': (v0['x'] - v2['x']) / (v0['y'] - v2['y']),
+                'taxaZ': (v0['z'] - v2['z']) / (v0['y'] - v2['y']),
+                'taxaColor': [(v0['color'][i] - v2['color'][i]) / (v0['y'] - v2['y']) for i in range(3)]
+            }
+        ]
+
+        swaped = False
+        lastIniX, lastFimX = arestas[0]['ini']['x'], arestas[0]['ini']['x']
+        color_ini = v0['color'][:]
+        color_fim = v0['color'][:]
+
+        for y in range(round(v0['y']), round(v1['y'])):
+            lastIniX += arestas[0]['taxa']
+            lastFimX += arestas[2]['taxa']
+            color_ini = [color_ini[i] + arestas[0]['taxaColor'][i] for i in range(3)]
+            color_fim = [color_fim[i] + arestas[2]['taxaColor'][i] for i in range(3)]
+
+            intervalo = [lastIniX, lastFimX]
+            if intervalo[1] < intervalo[0]:
+                swaped = True
+                intervalo[0], intervalo[1] = intervalo[1], intervalo[0]
+                color_ini, color_fim = color_fim, color_ini
+
+            intervalo[0] = round(intervalo[0])
+            intervalo[1] = round(intervalo[1])
+
+            z = v0['z']
+            varX = intervalo[1] - intervalo[0] + 1e-16
+            deltaZ = (v1['z'] - v0['z']) / varX
+            color_step = [(color_fim[i] - color_ini[i]) / varX for i in range(3)]
+
+            current_color = color_ini[:]
+            for j in range(intervalo[0], intervalo[1]):
+                if j >= 0 and y >= 0 and j < self.width and y < self.height:
+                    if z > self.z_buffer[j, y]:
+                        self.screen.set_at((j, y), tuple(map(int, current_color)))
+                        self.z_buffer[j, y] = z
+                z += deltaZ
+                current_color = [current_color[i] + color_step[i] for i in range(3)]
+
+        swaped = False
+        lastIniX = arestas[1]['ini']['x']
+        color_ini = v1['color'][:]
+        color_fim = v1['color'][:]
+
+        for y in range(round(v1['y']), round(v2['y'])):
+            lastIniX += arestas[1]['taxa']
+            lastFimX += arestas[2]['taxa']
+            color_ini = [color_ini[i] + arestas[1]['taxaColor'][i] for i in range(3)]
+            color_fim = [color_fim[i] + arestas[2]['taxaColor'][i] for i in range(3)]
+
+            intervalo = [lastIniX, lastFimX]
+            if intervalo[1] < intervalo[0]:
+                intervalo[0], intervalo[1] = intervalo[1], intervalo[0]
+                color_ini, color_fim = color_fim, color_ini
+                swaped = True
+
+            intervalo[0] = round(intervalo[0])
+            intervalo[1] = round(intervalo[1])
+
+            z = v1['z']
+            varX = intervalo[1] - intervalo[0]
+            deltaZ = (v2['z'] - v1['z']) / varX
+            color_step = [(color_fim[i] - color_ini[i]) / varX for i in range(3)]
+
+            current_color = color_ini[:]
+            for j in range(intervalo[0], intervalo[1]):
+                if j >= 0 and y >= 0 and j < self.width and y < self.height:
+                    if z > self.z_buffer[j, y]:
+                        try:
+                            self.screen.set_at((j, y), tuple(map(int, current_color)))
+                        except:
+                            print(tuple(map(int, current_color)))
+                            exit()
+                        self.z_buffer[j, y] = z
+                z += deltaZ
+                current_color = [current_color[i] + color_step[i] for i in range(3)]
+
+
     def render(self):
         for obj_idx, o in enumerate(self.objetos):
-            faces = o.get_faces_visible(self.camera_pos)
+            # faces = o.get_faces_visible(self.camera_pos)
             # faces = o.get_faces()
-            vertices = o.get_vertices()
-            ones_column = np.ones((vertices.shape[0], 1))
-            new_array = np.hstack((vertices, ones_column))
+            # vertices = o.get_vertices()
+            # ones_column = np.ones((vertices.shape[0], 1))
+            # new_array = np.hstack((vertices, ones_column))
 
-            vertices = self.create_objetos() @ new_array.T[:4]
-            if not self.axis:
-                vertices[[0, 1]] /= vertices[-1]
-            # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
-            vertices = vertices.T
+            # vertices = self.create_objetos() @ new_array.T[:4]
+            # if not self.axis:
+            #     vertices[[0, 1]] /= vertices[-1]
+            # # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
+            # vertices = vertices.T
 
-            # vertices = np.array([
-            #     [100,100, 32],
-            #     [100,440,24],
-            #     [200,200,23],
-            #     [440,140,32]
-            # ])
-            # faces = []
-            # faces.append(Face(vertices, [0,3,2]))
-            # faces.append(Face(vertices, [0,1,2]))
-            # faces.append(Face(vertices, [1,2,3])) # Esse aqui apresenta erro 
+            vertices = np.array([
+                [100,100, 32],
+                [100,440,24],
+                [200,200,23],
+                [440,140,32]
+            ])
+            faces = []
+            faces.append(Face(vertices, [0,3,2]))
+            faces.append(Face(vertices, [0,1,2]))
+            faces.append(Face(vertices, [1,2,3])) # Esse aqui apresenta erro 
             for face_idx, face in enumerate(faces):
-                s = np.array(self.camera_pos) - np.array(face.centroide)
-                s = s/np.linalg.norm(s)
-                cor = luz.calc_luz(s, face.centroide, face.normal, (0.2,0.3,0.4),(0.5,0.3,0.1),(0.2,0.3,0.1),(255,255,255),(255,255,255), (0,0,0), 3)
+                # s = np.array(self.camera_pos) - np.array(face.centroide)
+                # s = s/np.linalg.norm(s)
+                # cor = luz.calc_luz(s, face.centroide, face.normal, (0.2,0.3,0.4),(0.5,0.3,0.1),(0.2,0.3,0.1),(255,255,255),(255,255,255), (0,0,0), 3)
                 # print(cor, s, face.normal, face.centroide)
-                cor = np.array(cor).astype(int)
+                # cor = np.array(cor).astype(int)
                 # cor = (255,0,0)
-                print(cor)
-                self.fillpoli(face, vertices, cor)
+                # print(cor)
+                self.guro(face, vertices, (255,0,0),(0,255,0),(0,0,255))
+
+                # self.fillpoli(face, vertices, cor)
                 # self.fillpoly(face, vertices, (100//(face_idx+1), 200//(face_idx+1),  face_idx))
                 # self.fillpoli(face, vertices, ())
 

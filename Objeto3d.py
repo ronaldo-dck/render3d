@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from camera import Camera, Projetion
 
+
 class Face:
     def __init__(self, all_vertices, face):
         v0 = np.array(all_vertices[face[0]])
         v1 = np.array(all_vertices[face[1]])
         v2 = np.array(all_vertices[face[2]])
         normal = np.cross(v2 - v1, v0 - v1)
-        # print(normal)
         comprimento = np.linalg.norm(normal)
         self.vertices = face
         self.normal = normal / comprimento
@@ -35,7 +35,7 @@ class Face:
 class Objeto3d:
     def __init__(self, polyline: list) -> None:
         self.__polyline = polyline
-        self.material = (0.2,0.3,0.4)
+        self.material = (0.2, 0.3, 0.4)
 
     def set_luz(self, material):
         self.material = material
@@ -97,12 +97,8 @@ class Objeto3d:
         return self.__edges
 
     def get_vertices(self):
-        # Criação de um array de 1s com a mesma quantidade de linhas
         ones_column = np.ones((self.__vertices.shape[0], 1))
-
-        # Concatenando a coluna de 1s ao array original
         new_array = np.hstack((self.__vertices, ones_column))
-
         return new_array
 
     def get_centro_box_envolvente(self):
@@ -135,9 +131,8 @@ class Objeto3d:
         faces_ordenadas = [f for _, _, f in ordem]
         return faces_ordenadas
 
-
     def create_objetos(self, obs):
-        self.camera = Camera(obs, (0,0,0), (0, 1, 0))
+        self.camera = Camera(obs, (0, 0, 0), (0, 1, 0))
         self.projetion = Projetion().projetion_matrix(410)
         self.to_screen = Projetion().to_screen(-800//2, 800//2, -
                                                800//2, 800//2, 0, 800, 0, 800)
@@ -146,7 +141,7 @@ class Objeto3d:
 
         return self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
-    def visualize(self, observador=(20,-20,20)):
+    def visualize(self, observador=(20, -20, 20)):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
@@ -155,7 +150,6 @@ class Objeto3d:
         vertices /= vertices[-1]
         vertices = vertices.T
         ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2])
-        print(vertices)
         # Plotando apenas as faces visíveis
         for face in self.get_faces_visible(observador):
             v0, v1, v2 = face.vertices
@@ -174,19 +168,29 @@ class Objeto3d:
 
         plt.show()
 
+    def calc_normais_vertices(self):
+        self.normais_vetores = []
+        for i, v in enumerate(self.__vertices):
+            n_unit = np.array([0.0, 0.0, 0.0])
+            for f in self.__faces:
+                if i in f.vertices:
+                    n_unit += np.array(f.normal)
+
+            norm = np.linalg.norm(n_unit)
+            n_unit /= norm
+            self.normais_vetores.append(n_unit)
 
 
 if __name__ == '__main__':
-    obj1 = Objeto3d([(10,10), (15,10)])
+    obj1 = Objeto3d([(-15, 10), (15, 15)])
     obj1.rotacaoX(4)
 
     # print("Arestas:", obj1.get_edges())
-    print("Vértices:\n", np.round(obj1.get_vertices(),1))
+    # print("Vértices:\n", np.round(obj1.get_vertices(),1))
     # for f in obj1.get_faces_visible((-1, 0, 0)):
     #     print(f.vertices)
 
+    # for f in obj1.get_faces():
+    #     print(f.vertices)
 
-    for f in obj1.get_faces():
-        print(f.vertices)
-
-    obj1.visualize()
+    obj1.calc_normais_vertices()
