@@ -3,9 +3,10 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
-from teste import Objeto3d, Face, render_poly
+from Objeto3d import Objeto3d, Face
 import random
 from camera import Camera, Projetion
+import luz
 
 import numpy as np
 
@@ -19,20 +20,21 @@ class Cena3D:
         self.cor_buffer = np.full((self.height, self.width, 3), [
             174, 174, 174], dtype=np.uint8)
         for obj in self.objetos:
-            obj.rotacaoX(36)
+            obj.rotacaoX(6)
         self.axis = False
-        self.camera_pos = [500, 600, 1000]
-        self.camera_lookat = [600, 0, 0]
+        self.camera_pos = [-1,0, 0]
+        self.camera_lookat = [0, 0, 0]
 
         pg.font.init()
         self.font = pg.font.SysFont(None, 36)
+        
 
         # self.__cores_faces = [[(random.uniform(0, 1), random.uniform(
         #     0, 1), random.uniform(0, 1)) for _ in obj.get_faces()] for obj in self.objetos]
 
     def create_objetos(self):
         self.camera = Camera(self.camera_pos, self.camera_lookat, (0, 1, 0))
-        self.projetion = Projetion().projetion_matrix(500)
+        self.projetion = Projetion().projetion_matrix(200)
         if self.axis:
             self.projetion = np.array([
                 [1,0,0,0],
@@ -230,7 +232,10 @@ class Cena3D:
             varX = intervalo[1] - intervalo[0] + 1e-16
             deltaZ = (v1['z'] - v0['z']) / varX
             for j in range(intervalo[0], intervalo[1]):
-                self.screen.set_at((j, y), color)
+                if j >= 0 and y >= 0 and j < self.width and y < self.height: 
+                    if z > self.z_buffer[j, y]:
+                        self.screen.set_at((j, y), color)
+                        self.z_buffer[j,y] = z
                 z += deltaZ
 
         swaped = False
@@ -253,91 +258,12 @@ class Cena3D:
             deltaZ = (v2['z'] - v1['z']) / varX
 
             for j in range(intervalo[0], intervalo[1]):
-                self.screen.set_at((j, y), color)
+                if j >= 0 and y >= 0 and j < self.width and y < self.height: 
+                    if z > self.z_buffer[j, y]:
+                        self.screen.set_at((j, y), color)
+                        self.z_buffer[j,y] = z
                 z += deltaZ
 
-    def fillpoli2(self, face, all_vertices, color):
-        vertices = all_vertices[face.vertices]
-        # self.poly.pontos.sort(key=lambda p: p['y'])
-        # v0, v1, v2 = self.poly.pontos[0], self.poly.pontos[1], self.poly.pontos[2]
-
-        vertices = sorted(vertices, key=lambda v: v[1])
-        # vertices = selected_vertices
-
-        # (x0, y0), z0 = map(int, vertices[0][:2]), float(vertices[0][2])
-        # (x1, y1), z1 = map(int, vertices[1][:2]), float(vertices[1][2])
-        # (x2, y2), z2 = map(int, vertices[2][:2]), float(vertices[2][2])
-        v0 = {
-            'x': vertices[0][0],
-            'y': vertices[0][1],
-            'z': vertices[0][2],
-        }
-        v1 = {
-            'x': vertices[1][0],
-            'y': vertices[1][1],
-            'z': vertices[1][2],
-        }
-        v2 = {
-            'x': vertices[2][0],
-            'y': vertices[2][1],
-            'z': vertices[2][2],
-        }
-
-        arestas = [
-            {
-                'ini': v0,
-                'fim': v1,
-                'taxa': (v1['x'] - v0['x']) / (v1['y'] - v0['y']),
-            },
-            {
-                'ini': v1,
-                'fim': v2,
-                'taxa': (v2['x'] - v1['x']) / (v2['y'] - v1['y']),
-            },
-            {
-                'ini': v2,
-                'fim': v0,
-                'taxa': (v0['x'] - v2['x']) / (v0['y'] - v2['y']),
-            }
-        ]
-
-        lastIniX, lastFimX = arestas[0]['ini']['x'], arestas[0]['ini']['x']
-        for y in range(round(v0['y']), round(v1['y'])):
-            lastIniX += arestas[0]['taxa']
-            lastFimX += arestas[2]['taxa']
-            intervalo = [lastIniX, lastFimX]
-
-            if intervalo[1] < intervalo[0]:
-                intervalo[0], intervalo[1] = intervalo[1], intervalo[0]
-
-            intervalo[0] = round(intervalo[0])
-            intervalo[1] = round(intervalo[1])
-
-            z = v0['z']
-            varX = intervalo[1] - intervalo[0]
-            deltaZ = (v1['z'] - v0['z']) / varX
-            for j in range(intervalo[0], intervalo[1]):
-                self.screen.set_at((j, y), color)
-                z += deltaZ
-
-        for y in range(round(v1['y']), round(v2['y'])):
-            lastIniX += arestas[1]['taxa']
-            lastFimX += arestas[2]['taxa']
-            intervalo = [lastIniX, lastFimX]
-
-            if intervalo[1] < intervalo[0]:
-                intervalo[0], intervalo[1] = intervalo[1], intervalo[0]
-
-            intervalo[0] = round(intervalo[0])
-            intervalo[1] = round(intervalo[1])
-
-            z = v1['z']
-            varX = intervalo[1] - intervalo[0]
-            deltaZ = (v2['z'] - v1['z']) / varX
-
-            for j in range(intervalo[0], intervalo[1]):
-                self.screen.set_at((j, y), color)
-                z += deltaZ
 
     def render(self):
         for obj_idx, o in enumerate(self.objetos):
@@ -352,7 +278,6 @@ class Cena3D:
                 vertices[[0, 1]] /= vertices[-1]
             # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
-            print(vertices)
 
             # vertices = np.array([
             #     [100,100, 32],
@@ -365,7 +290,14 @@ class Cena3D:
             # faces.append(Face(vertices, [0,1,2]))
             # faces.append(Face(vertices, [1,2,3])) # Esse aqui apresenta erro 
             for face_idx, face in enumerate(faces):
-                self.fillpoli(face, vertices, (100//(face_idx+1), 200//(face_idx+1),  face_idx))
+                s = np.array(self.camera_pos) - np.array(face.centroide)
+                s = s/np.linalg.norm(s)
+                cor = luz.calc_luz(s, face.centroide, face.normal, (0.2,0.3,0.4),(0.5,0.3,0.1),(0.2,0.3,0.1),(255,255,255),(255,255,255), (0,0,0), 3)
+                # print(cor, s, face.normal, face.centroide)
+                cor = np.array(cor).astype(int)
+                # cor = (255,0,0)
+                print(cor)
+                self.fillpoli(face, vertices, cor)
                 # self.fillpoly(face, vertices, (100//(face_idx+1), 200//(face_idx+1),  face_idx))
                 # self.fillpoli(face, vertices, ())
 

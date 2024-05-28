@@ -35,7 +35,10 @@ class Face:
 class Objeto3d:
     def __init__(self, polyline: list) -> None:
         self.__polyline = polyline
+        self.material = (0.2,0.3,0.4)
 
+    def set_luz(self, material):
+        self.material = material
 
     def rotacaoX(self, segments=4):
         """ Cria um modelo 3D rotacionando uma polilinha em torno do eixo X. """
