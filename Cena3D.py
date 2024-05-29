@@ -21,7 +21,7 @@ class Cena3D:
         self.cor_buffer = np.full((self.height, self.width, 3), [
             174, 174, 174], dtype=np.uint8)
         for obj in self.objetos:
-            obj.rotacaoX(6)
+            obj.rotacaoX(4)
         self.axis = True
         self.camera_pos = [-1,0, 0]
         self.camera_lookat = [0, 0, 0]
@@ -326,10 +326,13 @@ class Cena3D:
             color_fim = [color_fim[i] + arestas[2]['taxaColor'][i] for i in range(3)]
 
             intervalo = [lastIniX, lastFimX]
+            tempColorIni = color_ini[:]
+            tempColorFim = color_fim[:]
             if intervalo[1] < intervalo[0]:
                 swaped = True
                 intervalo[0], intervalo[1] = intervalo[1], intervalo[0]
-                color_ini, color_fim = color_fim, color_ini
+                # color_ini, color_fim = color_fim, color_ini  # << tudo culpa do python
+                tempColorIni, tempColorFim = tempColorFim, tempColorIni
 
             intervalo[0] = round(intervalo[0])
             intervalo[1] = round(intervalo[1])
@@ -337,9 +340,9 @@ class Cena3D:
             z = v0['z']
             varX = intervalo[1] - intervalo[0] + 1e-16
             deltaZ = (v1['z'] - v0['z']) / varX
-            color_step = [(color_fim[i] - color_ini[i]) / varX for i in range(3)]
+            color_step = [(tempColorFim[i] - tempColorIni[i]) / varX for i in range(3)]
 
-            current_color = color_ini[:]
+            current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
                 if j >= 0 and y >= 0 and j < self.width and y < self.height:
                     if z > self.z_buffer[j, y]:
@@ -348,10 +351,9 @@ class Cena3D:
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
 
-        swaped = False
-        lastIniX = arestas[1]['ini']['x']
-        color_ini = v1['color'][:]
-        # color_fim = v1['color'][:]
+        if not swaped:
+            lastIniX = arestas[1]['ini']['x']
+            color_ini = v1['color'][:]
 
         for y in range(round(v1['y']), round(v2['y'])):
             lastIniX += arestas[1]['taxa']
@@ -360,9 +362,12 @@ class Cena3D:
             color_fim = [color_fim[i] + arestas[2]['taxaColor'][i] for i in range(3)]
 
             intervalo = [lastIniX, lastFimX]
+            tempColorIni = color_ini[:]
+            tempColorFim = color_fim[:]
             if intervalo[1] < intervalo[0]:
                 intervalo[0], intervalo[1] = intervalo[1], intervalo[0]
-                color_ini, color_fim = color_fim, color_ini
+                # color_ini, color_fim = color_fim, color_ini
+                tempColorIni, tempColorFim = tempColorFim, tempColorIni
                 swaped = True
 
             intervalo[0] = round(intervalo[0])
@@ -371,9 +376,9 @@ class Cena3D:
             z = v1['z']
             varX = intervalo[1] - intervalo[0]
             deltaZ = (v2['z'] - v1['z']) / varX
-            color_step = [(color_fim[i] - color_ini[i]) / varX for i in range(3)]
+            color_step = [(tempColorFim[i] - tempColorIni[i]) / varX for i in range(3)]
 
-            current_color = color_ini[:]
+            current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
                 if j >= 0 and y >= 0 and j < self.width and y < self.height:
                     if z > self.z_buffer[j, y]:
@@ -408,6 +413,8 @@ class Cena3D:
             ])
             faces = []
             faces.append(Face(vertices, [0,3,2]))
+            faces.append(Face(vertices, [2,1,3]))
+            faces.append(Face(vertices, [0,1,2]))
             # faces.append(Face(vertices, [0,1,2]))
             # faces.append(Face(vertices, [1,2,3])) # Esse aqui apresenta erro 
             for face_idx, face in enumerate(faces):
@@ -446,7 +453,7 @@ class Cena3D:
     def run(self):
         pg.init()
         size = (self.width, self.height)
-        self.screen = pg.display.set_mode(size, display=0, flags=RESIZABLE)
+        self.screen = pg.display.set_mode(size, display=1, flags=RESIZABLE)
         clock = pg.time.Clock()
 
         running = True
