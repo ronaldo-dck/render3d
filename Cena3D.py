@@ -312,6 +312,7 @@ class Cena3D:
                 'taxaColor': [(v0['color'][i] - v2['color'][i]) / (v0['y'] - v2['y']) for i in range(3)]
             }
         ]
+        
 
         swaped = False
         lastIniX, lastFimX = arestas[0]['ini']['x'], arestas[0]['ini']['x']
@@ -350,7 +351,7 @@ class Cena3D:
         swaped = False
         lastIniX = arestas[1]['ini']['x']
         color_ini = v1['color'][:]
-        color_fim = v1['color'][:]
+        # color_fim = v1['color'][:]
 
         for y in range(round(v1['y']), round(v2['y'])):
             lastIniX += arestas[1]['taxa']
@@ -380,7 +381,6 @@ class Cena3D:
                             self.screen.set_at((j, y), tuple(map(int, current_color)))
                         except:
                             print(tuple(map(int, current_color)))
-                            exit()
                         self.z_buffer[j, y] = z
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
@@ -408,8 +408,8 @@ class Cena3D:
             ])
             faces = []
             faces.append(Face(vertices, [0,3,2]))
-            faces.append(Face(vertices, [0,1,2]))
-            faces.append(Face(vertices, [1,2,3])) # Esse aqui apresenta erro 
+            # faces.append(Face(vertices, [0,1,2]))
+            # faces.append(Face(vertices, [1,2,3])) # Esse aqui apresenta erro 
             for face_idx, face in enumerate(faces):
                 # s = np.array(self.camera_pos) - np.array(face.centroide)
                 # s = s/np.linalg.norm(s)
