@@ -17,7 +17,7 @@ class Cena2D:
         self.drawing = False
 
         pygame.font.init()
-        self.font = pygame.font.SysFont(None, 36)
+        self.font = pygame.font.SysFont(None, 30)
 
     def draw_button(self, screen, rect, text, color):
         pygame.draw.rect(screen, color, rect)
@@ -27,8 +27,8 @@ class Cena2D:
 
     def draw_mouse_coords(self, screen, x, y):
         coord_text = f"X: {x}, Y: {y}"
-        text_surf = self.font.render(coord_text, True, (0, 0, 0))
-        screen.blit(text_surf, (10, 70))
+        text_surf =  pygame.font.SysFont(None, 20).render(coord_text, True, (0, 0, 0))
+        screen.blit(text_surf, (100, 85))
 
     def draw_axes(self, screen):
         pygame.draw.line(screen, (0, 0, 0), (self.DRAW_AREA_X, self.DRAW_AREA_Y), (self.DRAW_AREA_X + self.DRAW_AREA_WIDTH, self.DRAW_AREA_Y), 2)
@@ -39,12 +39,11 @@ class Cena2D:
     def run(self):
 
         pygame.init()
-        button_start_rect = pygame.Rect(10, 10, 150, 50)
-        button_end_rect = pygame.Rect(170, 10, 150, 50)
-        button_calc = pygame.Rect(370, 10, 150, 50)
-        button_3d = pygame.Rect(530, 10, 150, 50)
-        button_2d = pygame.Rect(690, 10, 150, 50)
-        button_close_polyline = pygame.Rect(690, 100, 150, 50)
+        button_start_rect = pygame.Rect(50, 25, 200, 50)
+        button_close_polyline = pygame.Rect(300, 25, 200, 50)
+        button_end_rect = pygame.Rect(550, 25, 200, 50)
+        button_3d = pygame.Rect(167, 525, 150, 50)
+        button_2d = pygame.Rect(484, 525, 150, 50)
 
         running = True
         while running:
@@ -56,6 +55,12 @@ class Cena2D:
                     if button_start_rect.collidepoint(mouse_pos):
                         self.drawing = True
                         self.current_polyline.clear()
+                    elif button_close_polyline.collidepoint(mouse_pos):
+                        if self.current_polyline:
+                            self.current_polyline.append(self.current_polyline[0])
+                            self.polylines.append(self.current_polyline.copy())
+                            self.current_polyline.clear()
+                        self.drawing = False
                     elif button_end_rect.collidepoint(mouse_pos):
                         if self.current_polyline:
                             self.polylines.append(self.current_polyline.copy())
@@ -68,18 +73,18 @@ class Cena2D:
                     elif button_2d.collidepoint(mouse_pos):
                         cena = CenaWireframe(self.polylines)
                         cena.run()
-                    elif button_close_polyline.collidepoint(mouse_pos):
-                        self.current_polyline.append(self.current_polyline[0])
-                        self.polylines.append(self.current_polyline.copy())
-                        self.current_polyline.clear()
 
             self.screen.fill((255, 255, 255))
-            self.draw_button(self.screen, button_start_rect, "Iniciar Desenho", (0, 255, 0))
-            self.draw_button(self.screen, button_end_rect, "Terminar Desenho", (255, 0, 0))
-            self.draw_button(self.screen, button_calc, 'Gera obj', (0, 0, 255))
+            if not self.drawing:
+                self.draw_button(self.screen, button_start_rect, "Iniciar Desenho", (50, 255, 150))
+                self.draw_button(self.screen, button_close_polyline, 'Finalizar fechado', (200, 200, 200))
+                self.draw_button(self.screen, button_end_rect, "Finalizar aberto", (200, 200, 200))
+            else:
+                self.draw_button(self.screen, button_start_rect, "Iniciar Desenho", (200, 200, 200))
+                self.draw_button(self.screen, button_close_polyline, 'Finalizar fechado', (255, 230, 50))
+                self.draw_button(self.screen, button_end_rect, "Finalizar aberto", (255, 70, 70))
             self.draw_button(self.screen, button_3d, '3D', (200, 200, 200))
             self.draw_button(self.screen, button_2d, '2D', (200, 200, 200))
-            self.draw_button(self.screen, button_close_polyline, 'end', (200, 200, 200))
             pygame.draw.rect(self.screen, (200, 200, 200), (self.DRAW_AREA_X, self.DRAW_AREA_Y, self.DRAW_AREA_WIDTH, self.DRAW_AREA_HEIGHT), 0)
             self.draw_axes(self.screen)
 
