@@ -1,8 +1,8 @@
 import pygame as pg
 from pygame.locals import *
-from OpenGL.GL import *
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
+# from OpenGL.GL import *
+# from OpenGL.GLUT import *
+# from OpenGL.GLU import *
 from Objeto3d import Objeto3d, Face
 import random
 from camera import Camera, Projetion
@@ -21,15 +21,25 @@ class Cena3D:
         self.cor_buffer = np.full((self.height, self.width, 3), (24, 24, 24))
         for obj in self.objetos:
             obj.rotacaoX(4)
-        self.axis = True
-        self.camera_pos = [-10, 0, 0]
+        self.axis = False
+        self.luz_pos = [0,0,0]
+        self.luz_prop = [255,255,255]
+        self.luz_ambiente = [255,255,255]
+        self.camera_pos = [-15, 0, 0]
         self.camera_lookat = [0, 0, 0]
+        self.current_shader = 'constante'
         pg.font.init()
         self.font = pg.font.SysFont(None, 36)
 
     def create_objetos(self):
+        near = 0.1
+        far = 1000
+        z_min = near/far
+
+        recort3d = np.identity(4)
+        
         self.camera = Camera(self.camera_pos, self.camera_lookat, (0, 1, 0))
-        self.projetion = Projetion().projetion_matrix(10)
+        self.projetion = Projetion().projetion_matrix(200)
         if self.axis:
             self.projetion = np.array([
                 [1, 0, 0, 0],
@@ -37,10 +47,18 @@ class Cena3D:
                 [0, 0, 1, 0],
                 [0, 0, 0, 1]
             ])
+            recort3d = np.array([  
+                    [1, 0, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 0, 1/(1+z_min), -z_min/(1+z_min)],
+                    [0, 0, -1, 0]
+                    ])
+        
         self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -
                                                self.height//2, self.height//2, 0, self.width, 0, self.height)
 
-        return self.to_screen @ self.projetion @ self.camera.camera_matrix()
+
+        return  self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
     def draw_vertices(self, points=[]):
         for p in points:
@@ -103,11 +121,12 @@ class Cena3D:
             varX = intervalo[1] - intervalo[0] + 1e-16
             deltaZ = (v1['z'] - v0['z']) / varX
             for j in range(intervalo[0], intervalo[1]):
-                if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
+                # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
                     if z > self.z_buffer[j, y]:
-                        self.screen.set_at((j, y), color)
+                        self.cor_buffer[j, y] = color
+                        # self.screen.set_at((j, y), color)
                         self.z_buffer[j, y] = z
-                z += deltaZ
+                    z += deltaZ
 
         swaped = False
         lastIniX = arestas[1]['ini']['x']
@@ -129,11 +148,12 @@ class Cena3D:
             deltaZ = (v2['z'] - v1['z']) / varX
 
             for j in range(intervalo[0], intervalo[1]):
-                if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
+                # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
                     if z > self.z_buffer[j, y]:
-                        self.screen.set_at((j, y), color)
+                        # self.screen.set_at((j, y), color)
                         self.z_buffer[j, y] = z
-                z += deltaZ
+                        self.cor_buffer[j, y] = color
+                    z += deltaZ
 
     def gouraud(self, all_vertices, cor_v0, cor_v1, cor_v2):
         vertices = all_vertices
@@ -217,8 +237,8 @@ class Cena3D:
             for j in range(intervalo[0], intervalo[1]):
                 if j < self.width and y < self.height and z > self.z_buffer[j, y]:
                     try:
-                        # self.screen.set_at((j, y), tuple(map(int, current_color)))
-                        self.cor_buffer[j, y] = current_color
+                            # self.screen.set_at((j, y), tuple(map(int, current_color)))
+                            self.cor_buffer[j, y] = current_color
                         # print(y,current_color)
                     except:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
@@ -272,9 +292,150 @@ class Cena3D:
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
 
+
+    def phong(self, s, l_unit, all_vertices, vetor_v0, vetor_v1, vetor_v2, obj):
+        
+        vertices = all_vertices
+        vertices = sorted(vertices, key=lambda v: v[1])
+
+        v0 = {
+            'x': vertices[0][0],
+            'y': vertices[0][1],
+            'z': vertices[0][2],
+            'color': vetor_v0
+        }
+        v1 = {
+            'x': vertices[1][0],
+            'y': vertices[1][1],
+            'z': vertices[1][2],
+            'color': vetor_v1
+        }
+        v2 = {
+            'x': vertices[2][0],
+            'y': vertices[2][1],
+            'z': vertices[2][2],
+            'color': vetor_v2
+        }
+
+        arestas = [
+            {
+                'ini': v0,
+                'fim': v1,
+                'taxa': (v1['x'] - v0['x']) / (v1['y'] - v0['y']),
+                'taxaZ': (v1['z'] - v0['z']) / (v1['y'] - v0['y']),
+                'taxaColor': [(v1['color'][i] - v0['color'][i]) / (v1['y'] - v0['y']) for i in range(3)]
+            },
+            {
+                'ini': v1,
+                'fim': v2,
+                'taxa': (v2['x'] - v1['x']) / (v2['y'] - v1['y']),
+                'taxaZ': (v2['z'] - v1['z']) / (v2['y'] - v1['y']),
+                'taxaColor': [(v2['color'][i] - v1['color'][i]) / (v2['y'] - v1['y']) for i in range(3)]
+            },
+            {
+                'ini': v2,
+                'fim': v0,
+                'taxa': (v0['x'] - v2['x']) / (v0['y'] - v2['y']),
+                'taxaZ': (v0['z'] - v2['z']) / (v0['y'] - v2['y']),
+                'taxaColor': [(v0['color'][i] - v2['color'][i]) / (v0['y'] - v2['y']) for i in range(3)]
+            }
+        ]
+
+        swaped = False
+        lastIniX, lastFimX = arestas[0]['ini']['x'], arestas[0]['ini']['x']
+        color_ini = v0['color'][:]
+        color_fim = v0['color'][:]
+
+        for y in range(round(v0['y']), round(v1['y'])):
+            lastIniX += arestas[0]['taxa']
+            lastFimX += arestas[2]['taxa']
+            color_ini = [color_ini[i] + arestas[0]['taxaColor'][i]
+                         for i in range(3)]
+            color_fim = [color_fim[i] + arestas[2]['taxaColor'][i]
+                         for i in range(3)]
+            
+            intervalo = [lastIniX, lastFimX]
+            tempColorIni = color_ini[:]
+            tempColorFim = color_fim[:]
+            
+            if intervalo[1] < intervalo[0]:
+                swaped = True
+                intervalo[0], intervalo[1] = intervalo[1], intervalo[0]
+                tempColorIni, tempColorFim = tempColorFim, tempColorIni
+
+            intervalo[0] = round(intervalo[0])
+            intervalo[1] = round(intervalo[1])
+
+            z = v0['z']
+            varX = intervalo[1] - intervalo[0] + 1e-16
+            deltaZ = (v1['z'] - v0['z']) / varX
+            color_step = [(tempColorFim[i] - tempColorIni[i]) / varX for i in range(3)]
+
+            current_color = tempColorIni[:]
+
+            for j in range(intervalo[0], intervalo[1]):
+                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                    try:
+                        n = current_color/np.linalg.norm(current_color)
+                        cor = luz.calc_luz_phong(s, l_unit ,n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
+                        self.cor_buffer[j, y] = cor
+                    except:
+                        print(y, np.array(current_color).astype(int), traceback.format_exc())
+                        exit()
+                    self.z_buffer[j, y] = z
+                z += deltaZ
+                current_color = [current_color[i] + color_step[i] for i in range(3)]
+
+        if not swaped:
+            lastIniX = arestas[1]['ini']['x']
+            color_ini = v1['color'][:]
+
+        for y in range(round(v1['y']), round(v2['y'])):
+            lastIniX += arestas[1]['taxa']
+            lastFimX += arestas[2]['taxa']
+            color_ini = [color_ini[i] + arestas[1]['taxaColor'][i]
+                         for i in range(3)]
+            color_fim = [color_fim[i] + arestas[2]['taxaColor'][i]
+                         for i in range(3)]
+
+            intervalo = [lastIniX, lastFimX]
+            tempColorIni = color_ini[:]
+            tempColorFim = color_fim[:]
+            if intervalo[1] < intervalo[0]:
+                intervalo[0], intervalo[1] = intervalo[1], intervalo[0]
+                # color_ini, color_fim = color_fim, color_ini
+                tempColorIni, tempColorFim = tempColorFim, tempColorIni
+                swaped = True
+
+            intervalo[0] = round(intervalo[0])
+            intervalo[1] = round(intervalo[1])
+
+            z = v1['z']
+            varX = intervalo[1] - intervalo[0]
+            deltaZ = (v2['z'] - v1['z']) / varX
+            color_step = [(tempColorFim[i] - tempColorIni[i]) / varX for i in range(3)]
+
+            current_color = tempColorIni[:]
+            for j in range(intervalo[0], intervalo[1]):
+                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                    try:
+                        n = current_color/np.linalg.norm(current_color)
+                        cor = luz.calc_luz_phong(s, l_unit, n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
+                        self.cor_buffer[j, y] = cor
+                    except Exception as e:
+                        print(y, np.array(current_color).astype(int), traceback.format_exc())
+                        exit()
+
+                    self.z_buffer[j, y] = z
+
+                z += deltaZ
+                current_color = [current_color[i] + color_step[i] for i in range(3)]
+
+
     def render(self):
         for obj_idx, o in enumerate(self.objetos):
             faces = o.get_faces_visible(self.camera_pos)
+            # print(self.camera_pos)
             # faces = o.get_faces()
             vertices = o.get_vertices()
             ones_column = np.ones((vertices.shape[0], 1))
@@ -285,7 +446,7 @@ class Cena3D:
                 vertices[[0, 1]] /= vertices[-1]
             # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
-
+            
             # vertices = np.array([
             #     [100,100, 32],
             #     [100,440,24],
@@ -312,12 +473,9 @@ class Cena3D:
                 s3 = np.array(self.camera_pos) - np.array(v3[:3])
                 s3 = s3/np.linalg.norm(s3)
 
-                cor1 = luz.calc_luz(s1, v1[:3], vet_norm1, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
-                cor2 = luz.calc_luz(s2, v2[:3], vet_norm2, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
-                cor3 = luz.calc_luz(s3, v3[:3], vet_norm3, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
+                cor1 = luz.calc_luz(s1, v1[:3], vet_norm1, o.material_a, o.material_d, o.material_s, self.luz_ambiente, self.luz_prop, self.luz_pos, o.index_reflex)
+                cor2 = luz.calc_luz(s2, v2[:3], vet_norm2, o.material_a, o.material_d, o.material_s, self.luz_ambiente, self.luz_prop, self.luz_pos, o.index_reflex)
+                cor3 = luz.calc_luz(s3, v3[:3], vet_norm3, o.material_a, o.material_d, o.material_s, self.luz_ambiente, self.luz_prop, self.luz_pos, o.index_reflex)
 
                 cor1 = np.array(cor1).astype(int)
                 cor2 = np.array(cor2).astype(int)
@@ -326,29 +484,33 @@ class Cena3D:
                 s = np.array(self.camera_pos) - np.array(face.centroide)
                 s = s/np.linalg.norm(s)
 
-                cor = luz.calc_luz(s, face.centroide, face.normal, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), self.camera_pos, 3)
-                
+                cor = luz.calc_luz(s, face.centroide, face.normal, o.material_a, o.material_d, o.material_s, self.luz_ambiente, self.luz_prop, self.luz_pos, o.index_reflex)
+        
                 cor = np.array(cor).astype(int)
-
-                # cor1 = (255, 0, 0)
-                # cor2 = (0, 255, 0)
-                # cor3 = (0, 0, 255)
-                # cor = cor1
 
                 clip_face, clip_face_colors = sutherland_hodgman_clip(
                     vertices[face.vertices], [cor1, cor2, cor3], 0, 0, self.width-1, self.height)
                 
-                # print(clip_face)
                 if len(clip_face) > 0:
                     triangles, triangles_colors = triangulate_convex_polygon(clip_face, clip_face_colors)
 
+                    luz_pos = np.array(self.luz_pos)
+                    point = np.array(face.centroide)
+                    L = luz_pos - point
+                    l_unit = L/np.linalg.norm(L)      
+                    
+
+
                     for t, tc in zip(triangles, triangles_colors):
-                        self.gouraud(t, tc[0], tc[1], tc[2])
+                        if self.current_shader == 'constante':
+                            self.constante(face, vertices, cor)
+                        elif self.current_shader == 'gouraud':
+                            self.gouraud(t, tc[0], tc[1], tc[2])
+                        elif self.current_shader == 'phong':
+                            self.phong(s, l_unit ,t, tc[0], tc[1], tc[2], o)
                     
                     # self.gouraud(t, cor, cor, cor)
                 # self.fillpoli(face, vertices, cor)
-                # self.constante(face, vertices, cor)
         surf = pg.surfarray.make_surface(self.cor_buffer)
         self.screen.blit(surf, (0, 0))
         self.draw_vertices(vertices.T[:2].T)
@@ -409,6 +571,14 @@ class Cena3D:
                 elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
                         running = False
+                    elif event.key == pg.K_1:
+                        self.current_shader = 'constante'
+                    elif event.key == pg.K_2:
+                        self.current_shader = 'gouraud'
+                    elif event.key == pg.K_3:
+                        self.current_shader = 'phong'
+                    elif event.key == pg.K_p:
+                        self.axis = not self.axis
                     elif event.key == pg.K_q:
                         self.camera_pos[0] -= 1
                     elif event.key == pg.K_e:
@@ -430,7 +600,6 @@ class Cena3D:
                     elif event.key == pg.K_RIGHT:
                         self.camera_lookat[2] += 1
 
-            self.draw_button(self.screen, button_pespctiva, 'Pespctiva', (155,100,100))
             
 
                 # Obtém a posição atual do mouse
@@ -445,6 +614,7 @@ class Cena3D:
                 self.screen, self.camera_pos[0], self.camera_pos[1], self.camera_pos[2])
             self.draw_lookat_coords(
                 self.screen, self.camera_lookat[0], self.camera_lookat[1], self.camera_lookat[2])
+            self.draw_button(self.screen, button_pespctiva, 'Pespctiva', (155,100,100))
 
             pg.display.flip()
             clock.tick(24)  # Limita o loop a 60 frames por segundo

@@ -34,10 +34,16 @@ class Objeto3d:
     def __init__(self, polyline: list) -> None:
         self.__polyline = polyline
         self.normais_vetores = []
-        self.material = (0.2, 0.3, 0.4)
+        self.material_a = (0.2, 0.3, 0.4)
+        self.material_d = (0.2, 0.3, 0.4)
+        self.material_s = (0.2, 0.3, 0.4)
+        self.index_reflex = 10
 
-    def set_luz(self, material):
-        self.material = material
+    def set_materiais(self, material_a, material_d, mateirial_s, n):
+        self.material_a = material_a
+        self.material_d = material_d
+        self.material_s = mateirial_s
+        self.index_reflex = n
 
     def rotacaoX(self, segments=4):
         """ Cria um modelo 3D rotacionando uma polilinha em torno do eixo X. """

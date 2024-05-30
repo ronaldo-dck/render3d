@@ -21,8 +21,32 @@ def calc_luz(s, point, normal, m_ambiente, m_difuso, m_specular, luz_ambiente, l
         if angle_specular > 0:
             comp_specular = [m * ls * angle_specular**n for m, ls in zip(m_specular, luz_prop)]
     else:
-        comp_ambiente = [0,0,0]
-        comp_specular = [0,0,0]
+        return comp_ambiente
+    
+    luz =  [ca + cd + cs for ca, cd, cs in zip(comp_ambiente, comp_difusa, comp_specular)]
+
+    return luz
+
+
+
+def calc_luz_phong(s, l_unit, normal, m_ambiente, m_difuso, m_specular, luz_ambiente, luz_prop, n):
+    
+    comp_ambiente = [m * la for m, la in zip(m_ambiente, luz_ambiente)]
+    comp_difusa = [0,0,0]
+    comp_specular = [0,0,0]
+
+    normal = np.array(normal)
+
+    angle_difuso = np.dot(normal, l_unit)
+    if angle_difuso > 0:
+        comp_difusa = [m * ld  * angle_difuso for m, ld in zip(m_difuso, luz_prop)]
+        H = l_unit + np.array(s)
+        h = H/np.linalg.norm(H)
+        angle_specular = np.dot(h,normal)
+        if angle_specular > 0:
+            comp_specular = [m * ls * angle_specular**n for m, ls in zip(m_specular, luz_prop)]
+    else:
+        return comp_ambiente
     
     luz =  [ca + cd + cs for ca, cd, cs in zip(comp_ambiente, comp_difusa, comp_specular)]
 
