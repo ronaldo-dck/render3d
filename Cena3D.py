@@ -6,6 +6,7 @@ from OpenGL.GLU import *
 from Objeto3d import Objeto3d, Face
 import random
 from camera import Camera, Projetion
+from recorte2d import *
 import luz
 
 import numpy as np
@@ -134,8 +135,8 @@ class Cena3D:
                         self.z_buffer[j, y] = z
                 z += deltaZ
 
-    def gouraud(self, face, all_vertices, cor_v0, cor_v1, cor_v2):
-        vertices = all_vertices[face.vertices]
+    def gouraud(self, all_vertices, cor_v0, cor_v1, cor_v2):
+        vertices = all_vertices
         vertices = sorted(vertices, key=lambda v: v[1])
 
         v0 = {
@@ -273,62 +274,75 @@ class Cena3D:
 
     def render(self):
         for obj_idx, o in enumerate(self.objetos):
-            faces = o.get_faces_visible(self.camera_pos)
-            # faces = o.get_faces()
-            vertices = o.get_vertices()
-            ones_column = np.ones((vertices.shape[0], 1))
-            new_array = np.hstack((vertices, ones_column))
+            # faces = o.get_faces_visible(self.camera_pos)
+            # # faces = o.get_faces()
+            # vertices = o.get_vertices()
+            # ones_column = np.ones((vertices.shape[0], 1))
+            # new_array = np.hstack((vertices, ones_column))
 
-            vertices = self.create_objetos() @ new_array.T[:4]
-            if not self.axis:
-                vertices[[0, 1]] /= vertices[-1]
-            # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
-            vertices = vertices.T
+            # vertices = self.create_objetos() @ new_array.T[:4]
+            # if not self.axis:
+            #     vertices[[0, 1]] /= vertices[-1]
+            # # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
+            # vertices = vertices.T
 
-            # vertices = np.array([
-            #     [100,100, 32],
-            #     [100,440,24],
-            #     [200,200,23],
-            #     [440,140,32]
-            # ])
-            # faces = []
-            # faces.append(Face(vertices, [0,3,2]))
-            # faces.append(Face(vertices, [2,1,3]))
-            # faces.append(Face(vertices, [0,1,2]))
-            # faces.append(Face(vertices, [0,1,2]))
+            vertices = np.array([
+                [100,100, 32],
+                [100,440,24],
+                [200,200,23],
+                [440,140,32]
+            ])
+            faces = []
+            faces.append(Face(vertices, [0,3,2]))
+            faces.append(Face(vertices, [2,1,3]))
+            faces.append(Face(vertices, [0,1,2]))
+            faces.append(Face(vertices, [0,1,2]))
             # faces.append(Face(vertices, [1,2,3])) # Esse aqui apresenta erro
             for face_idx, face in enumerate(faces):
-                o.calc_normais_vertices()
-                vet_norm1, vet_norm2, vet_norm3 = [
-                    o.normais_vetores[i] for i in face.vertices]
-                v1, v2, v3 = vertices[face.vertices]
 
-                s1 = np.array(self.camera_pos) - np.array(v1[:3])
-                s1 = s1/np.linalg.norm(s1)
-                s2 = np.array(self.camera_pos) - np.array(v2[:3])
-                s2 = s2/np.linalg.norm(s2)
-                s3 = np.array(self.camera_pos) - np.array(v3[:3])
-                s3 = s3/np.linalg.norm(s3)
+                # o.calc_normais_vertices()
+                # vet_norm1, vet_norm2, vet_norm3 = [
+                #     o.normais_vetores[i] for i in face.vertices]
+                # v1, v2, v3 = vertices[face.vertices]
 
-                cor1 = luz.calc_luz(s1, v1[:3], vet_norm1, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
-                cor2 = luz.calc_luz(s2, v2[:3], vet_norm2, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
-                cor3 = luz.calc_luz(s3, v3[:3], vet_norm3, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
+                # s1 = np.array(self.camera_pos) - np.array(v1[:3])
+                # s1 = s1/np.linalg.norm(s1)
+                # s2 = np.array(self.camera_pos) - np.array(v2[:3])
+                # s2 = s2/np.linalg.norm(s2)
+                # s3 = np.array(self.camera_pos) - np.array(v3[:3])
+                # s3 = s3/np.linalg.norm(s3)
 
-                cor1 = np.array(cor1).astype(int)
-                cor2 = np.array(cor2).astype(int)
-                cor3 = np.array(cor3).astype(int)
+                # cor1 = luz.calc_luz(s1, v1[:3], vet_norm1, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
+                #     0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
+                # cor2 = luz.calc_luz(s2, v2[:3], vet_norm2, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
+                #     0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
+                # cor3 = luz.calc_luz(s3, v3[:3], vet_norm3, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
+                #     0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
 
-                s = np.array(self.camera_pos) - np.array(face.centroide)
-                s = s/np.linalg.norm(s)
-                cor = luz.calc_luz(s, face.centroide, face.normal, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), self.camera_pos, 3)
-                cor = np.array(cor).astype(int)
+                # cor1 = np.array(cor1).astype(int)
+                # cor2 = np.array(cor2).astype(int)
+                # cor3 = np.array(cor3).astype(int)
 
-                cor = np.random.randint(0,255,size=3)
-                self.gouraud(face, vertices, cor1, cor2, cor3)
+                # s = np.array(self.camera_pos) - np.array(face.centroide)
+                # s = s/np.linalg.norm(s)
+                # cor = luz.calc_luz(s, face.centroide, face.normal, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
+                #     0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), self.camera_pos, 3)
+                # cor = np.array(cor).astype(int)
+
+                cor1 = (255, 0, 0)
+                cor2 = (0, 255, 0)
+                cor3 = (0, 0, 255)
+                cor = cor1
+
+                clip_face, clip_face_colors = sutherland_hodgman_clip(
+                    vertices[face.vertices], [cor1, cor2, cor3], 0, 0, 300, self.height)
+                
+                triangles, triangles_colors = triangulate_convex_polygon(clip_face, clip_face_colors)
+                print(triangles_colors)
+
+                for t, tc in zip(triangles, triangles_colors):
+                    self.gouraud(t, tc[0], tc[1], tc[2])
+                    # self.gouraud(t, cor, cor, cor)
                 # self.fillpoli(face, vertices, cor)
                 # self.constante(face, vertices, cor)
 
@@ -397,7 +411,6 @@ class Cena3D:
                 # Obtém a posição atual do mouse
             mouse_x, mouse_y = pg.mouse.get_pos()
 
-
         # Define a posição onde o texto será renderizado
             # self.screen.fill(pg.Color('darkslategray'))
             self.render()
@@ -419,7 +432,7 @@ if __name__ == '__main__':
         # (((1, 0), (-1, 1), (1, 1), (1, 0))),
         # (((100, 0), (-200, 200), (-100, -100), (100, 0)))
         # Novo objeto adicionado
-        ((100, 100), (150, 100), (200,200))
+        ((100, 100), (150, 100), (200, 200))
         # ((-10, 10), (10, 10))
     ]
     cena = Cena3D(polylines)
