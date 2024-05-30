@@ -215,7 +215,7 @@ class Cena3D:
             current_color = tempColorIni[:]
 
             for j in range(intervalo[0], intervalo[1]):
-                if z > self.z_buffer[j, y]:
+                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
                     try:
                         # self.screen.set_at((j, y), tuple(map(int, current_color)))
                         self.cor_buffer[j, y] = current_color
@@ -258,7 +258,7 @@ class Cena3D:
 
             current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
-                if z > self.z_buffer[j, y]:
+                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
                     try:
                         # self.screen.set_at((j, y), np.array(current_color).astype(int))
                         self.cor_buffer[j, y] = current_color
