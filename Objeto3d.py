@@ -129,24 +129,28 @@ class Objeto3d:
         ones_column = np.ones((vertices.shape[0], 1))
         new_array = np.hstack((vertices, ones_column))
         vertices = translate(point) @ new_array.T[:4]
-        self.__vertices = vertices.T[:2].T
+        self.__vertices = vertices[:3].T
         self.__vertices_h = vertices.T
 
     def internal_rotate(self, angle, axis):
         G = np.array(self.get_centro_box_envolvente())
+        print(self.__vertices)
         if axis == 'Y':
-            vertices = translate(G) @ rotate_y(angle) @ translate(-G)  @ self.get_vertices().T
+            vertices = translate(G) @ rotate_y(angle) @ translate(-G)  @ self.__vertices_h.T
         if axis == 'X':
-            vertices = translate(G) @ rotate_y(angle) @ translate(-G)  @ self.get_vertices().T
+            vertices = translate(G) @ rotate_x(angle) @ translate(-G)  @ self.__vertices_h.T
         if axis == 'Z':
-            vertices = translate(G) @ rotate_y(angle) @ translate(-G)  @ self.get_vertices().T
+            vertices = translate(G) @ rotate_z(angle) @ translate(-G)  @ self.__vertices_h.T
+        self.__vertices = vertices[:3].T
+        self.__vertices_h = vertices.T
+        print(vertices)
         
-        self.__vertices = vertices.T[:2].T
 
 
     def scale(self, fator):
         vertices = translate(fator) @ self.get_vertices().T
-        self.__vertices = vertices.T[:2].T
+        self.__vertices = vertices[:3].T
+        self.__vertices_h = vertices.T
 
 
     def get_centro_box_envolvente(self):
