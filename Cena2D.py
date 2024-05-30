@@ -67,8 +67,15 @@ class Cena2D:
                             self.current_polyline.clear()
                         self.drawing = False
                     elif self.drawing and self.DRAW_AREA_X <= mouse_pos[0] <= self.DRAW_AREA_X + self.DRAW_AREA_WIDTH and self.DRAW_AREA_Y <= mouse_pos[1] <= self.DRAW_AREA_Y + self.DRAW_AREA_HEIGHT:
-                        self.current_polyline.append(mouse_pos)
+                        self.current_polyline.append((mouse_pos[0] - self.DRAW_AREA_X, mouse_pos[1] - self.DRAW_AREA_Y))
                     elif button_3d.collidepoint(mouse_pos):
+                        # treated_polylines = []
+                        # for polyline in self.polylines:
+                        #     linha = [list(v) for v in polyline]
+                        #     treated_polylines.append([])
+                        #     for i in range(len(polyline)):
+                        #         # treated_polylines[index].append((polyline[i][0] - self.DRAW_AREA_X, polyline[i][1] - self.DRAW_AREA_Y))
+                        #         treated_polylines.append([polyline[i][0] - self.DRAW_AREA_X, polyline[i][1] - self.DRAW_AREA_Y])
                         return "3D", self.polylines
                     elif button_2d.collidepoint(mouse_pos):
                         cena = CenaWireframe(self.polylines)
@@ -90,11 +97,11 @@ class Cena2D:
 
             for polyline in self.polylines:
                 if len(polyline) > 1:
-                    pygame.draw.lines(self.screen, (0, 0, 0), False, polyline, 2)
+                    pygame.draw.lines(self.screen, (0, 0, 0), False, [(x+100, y+100) for x, y in polyline], 2)
             if len(self.current_polyline) > 1:
-                pygame.draw.lines(self.screen, (0, 0, 255), False, self.current_polyline, 2)
+                pygame.draw.lines(self.screen, (0, 0, 255), False, [(x+100, y+100) for x, y in self.current_polyline], 2)
             elif len(self.current_polyline) == 1:
-                pygame.draw.circle(self.screen, (0, 0, 255), self.current_polyline[0], 3)
+                pygame.draw.circle(self.screen, (0, 0, 255), (self.current_polyline[0][0]+100, self.current_polyline[0][1]+100), 3)
 
             mouse_x, mouse_y = pygame.mouse.get_pos()
             if mouse_x >= self.DRAW_AREA_X and mouse_x <= self.DRAW_AREA_WIDTH:

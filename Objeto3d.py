@@ -15,15 +15,13 @@ class Face:
         self.normal = normal / comprimento
         self.centroide = np.mean([v0, v1, v2], axis=0)
 
-    def is_visible(self, observador):
+    def is_visible(self, observador, open_surface):
         O = np.array(observador) - self.centroide
         O_norm = np.linalg.norm(O)
         O_unit = O / O_norm
         angle = np.dot(O_unit, self.normal)
-        # print(self.vertices)
-        # print(self.centroide)
-        # print(self.normal, O_unit)
-        # print(angle)
+        if open_surface:
+            return angle != 0
         return angle > 0
 
     def get_dist(self, observador=(0, 20, 0)) -> int:
@@ -123,8 +121,12 @@ class Objeto3d:
 
     def get_faces_visible(self, observador):
         ordem = list()
+        
+        open_surface = False
+        if not np.array_equal(self.__polyline[-1], self.__polyline[0]):
+            open_surface = True
         for i, f in enumerate(self.__faces):
-            if f.is_visible(observador):
+            if f.is_visible(observador, open_surface):
                 ordem.append([i, f.get_dist(observador), f])
 
         ordem.sort(key=lambda x: x[1], reverse=True)
