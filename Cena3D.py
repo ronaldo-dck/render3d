@@ -18,6 +18,7 @@ class Cena3D:
         self.objetos = [Objeto3d(p) for p in polylines]
         self.width = 800
         self.height = 800
+        self.dimensions = [-self.width//2, self.width//2, -self.height//2, self.height//2, 0, self.width, 0, self.height]
         self.z_buffer = np.full((self.height, self.width), -float('inf'))
         self.cor_buffer = np.full((self.height, self.width, 3), (24, 24, 24))
         self.rotacoes = 4
@@ -61,9 +62,7 @@ class Cena3D:
                     [0, 0, -1, 0]
                     ])
         
-        self.to_screen = Projetion().to_screen(-self.width//2, self.width//2, -
-                                               self.height//2, self.height//2, 0, self.width, 0, self.height)
-
+        self.to_screen = Projetion().to_screen(self.dimensions[0], self.dimensions[1], self.dimensions[2], self.dimensions[3], self.dimensions[4], self.dimensions[5], self.dimensions[6], self.dimensions[7])
 
         return  self.to_screen @ self.projetion @ self.camera.camera_matrix()
 
@@ -72,7 +71,7 @@ class Cena3D:
             pg.draw.circle(self.screen, (255, 255, 255), p, 3)
 
     def constante(self, face, all_vertices, color):
-        vertices = all_vertices[face.vertices]
+        vertices = all_vertices
         vertices = sorted(vertices, key=lambda v: v[1])
         v0 = {
             'x': vertices[0][0],
@@ -507,8 +506,7 @@ class Cena3D:
                 cor = np.array(cor).astype(int)
 
                 clip_face, clip_face_colors = sutherland_hodgman_clip(
-                    vertices[face.vertices], [cor1, cor2, cor3], 0, 0, self.width-1, self.height)
-                
+                    vertices[face.vertices], [cor1, cor2, cor3], self.dimensions[4], self.dimensions[6], self.dimensions[5], self.dimensions[7])
                 if len(clip_face) > 0:
                     triangles, triangles_colors = triangulate_convex_polygon(clip_face, clip_face_colors)
 
@@ -521,7 +519,7 @@ class Cena3D:
 
                     for t, tc in zip(triangles, triangles_colors):
                         if self.current_shader == 'constante':
-                            self.constante(face, vertices, cor)
+                            self.constante(face, t, cor)
                         elif self.current_shader == 'gouraud':
                             self.gouraud(t, tc[0], tc[1], tc[2])
                         elif self.current_shader == 'phong':
@@ -589,7 +587,7 @@ class Cena3D:
     def run(self):
         pg.init()
         size = (self.width, self.height)
-        self.screen = pg.display.set_mode(size, display=0)
+        self.screen = pg.display.set_mode(size, display=0, flags=pg.RESIZABLE)
         clock = pg.time.Clock()
 
         running = True
@@ -687,6 +685,18 @@ class Cena3D:
                     title='Configuração',
                     width=self.width,
                     height=self.height
+                )
+
+                def setSizes(text):
+                    try:
+                        self.dimensions = [int(x) for x in text.strip('[]').split(',')]
+                    except ValueError:
+                        print('Erro ao parse a string de tamanho da tela.')
+
+                menu.add.text_input(
+                    'Tamanho tela: ',
+                    default=self.dimensions.__str__(),
+                    onchange= setSizes
                 )
 
                 def setProj(num):
