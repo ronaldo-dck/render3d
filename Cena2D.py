@@ -98,8 +98,8 @@ class Cena2D:
                 pygame.draw.circle(self.screen, (0, 0, 255), (self.current_polyline[0][0]+100, self.current_polyline[0][1]+100), 3)
 
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            if mouse_x >= self.DRAW_AREA_X and mouse_x <= self.DRAW_AREA_WIDTH:
-                if mouse_y >= self.DRAW_AREA_Y and mouse_y <= self.DRAW_AREA_HEIGHT:
+            if mouse_x >= self.DRAW_AREA_X and mouse_x <= self.DRAW_AREA_WIDTH + self.DRAW_AREA_X:
+                if mouse_y >= self.DRAW_AREA_Y and mouse_y <= self.DRAW_AREA_HEIGHT + self.DRAW_AREA_Y:
                     self.draw_mouse_coords(self.screen, mouse_x - self.DRAW_AREA_X, mouse_y - self.DRAW_AREA_Y)
 
             pygame.display.flip()

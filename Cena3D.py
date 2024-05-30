@@ -129,7 +129,7 @@ class Cena3D:
             deltaZ = (v1['z'] - v0['z']) / varX
             for j in range(intervalo[0], intervalo[1]):
                 # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
-                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     self.cor_buffer[j, y] = color
                     # self.screen.set_at((j, y), color)
                     self.z_buffer[j, y] = z
@@ -156,7 +156,7 @@ class Cena3D:
 
             for j in range(intervalo[0], intervalo[1]):
                 # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
-                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     # self.screen.set_at((j, y), color)
                     self.z_buffer[j, y] = z
                     self.cor_buffer[j, y] = color
@@ -242,7 +242,7 @@ class Cena3D:
             current_color = tempColorIni[:]
 
             for j in range(intervalo[0], intervalo[1]):
-                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     try:
                             # self.screen.set_at((j, y), tuple(map(int, current_color)))
                             self.cor_buffer[j, y] = current_color
@@ -285,7 +285,7 @@ class Cena3D:
 
             current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
-                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     try:
                         # self.screen.set_at((j, y), np.array(current_color).astype(int))
                         self.cor_buffer[j, y] = current_color
@@ -380,7 +380,7 @@ class Cena3D:
             current_color = tempColorIni[:]
 
             for j in range(intervalo[0], intervalo[1]):
-                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     try:
                         n = current_color/np.linalg.norm(current_color)
                         cor = luz.calc_luz_phong(s, l_unit ,n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
@@ -423,7 +423,7 @@ class Cena3D:
 
             current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
-                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     try:
                         n = current_color/np.linalg.norm(current_color)
                         cor = luz.calc_luz_phong(s, l_unit, n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
@@ -446,13 +446,13 @@ class Cena3D:
             vertices = o.get_vertices()
             # ones_column = np.ones((vertices.shape[0], 1))
             # new_array = np.hstack((vertices, ones_column)).T
-            print(vertices)
+            # print(vertices)
             vertices = self.create_objetos() @ vertices.T
             if not self.axis:
                 vertices[[0, 1]] /= vertices[-1]
             # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
-            print(vertices)
+            # print(vertices)
             
             # vertices = np.array([
             #     [100,100, 32],
@@ -744,9 +744,9 @@ class Cena3D:
 
                 def setMatAmbColor(text):
                     try:
-                        self.objetos[self.selected_obj].material_a = [float(x) for x in text.strip('()').split(',')]
+                        self.objetos[self.selected_obj].material_a = [float(x) for x in text.strip('[]').split(',')]
                     except ValueError:
-                        print('Erro ao parse a string de luz ambiente.')
+                        print('Erro ao parse a string de mat ambiente.')
 
                 menu.add.text_input(
                     title='Mat_Amb= ',
@@ -756,7 +756,7 @@ class Cena3D:
 
                 def setMatDifColor(text):
                     try:
-                        self.objetos[self.selected_obj].material_d = [float(x) for x in text.strip('()').split(',')]
+                        self.objetos[self.selected_obj].material_d = [float(x) for x in text.strip('[]').split(',')]
                     except ValueError:
                         print('Erro ao parse a string de mat dif.')
 
@@ -768,7 +768,7 @@ class Cena3D:
 
                 def setMatSpecColor(text):
                     try:
-                        self.objetos[self.selected_obj].material_s = [float(x) for x in text.strip('()').split(',')]
+                        self.objetos[self.selected_obj].material_s = [float(x) for x in text.strip('[]').split(',')]
                     except ValueError:
                         print('Erro ao parse a string de mat spec.')
 
@@ -776,6 +776,18 @@ class Cena3D:
                     title='Mat_Spec= ',
                     default=(self.objetos[self.selected_obj].material_s).__str__(),
                     onchange=setMatSpecColor
+                )
+
+                def setMatReflex(text):
+                    try:
+                        self.objetos[self.selected_obj].index_reflex = float(text)
+                    except ValueError:
+                        print('Erro ao parse a string de mat spec.')
+
+                menu.add.text_input(
+                    title='Reflex= ',
+                    default=(self.objetos[self.selected_obj].index_reflex).__str__(),
+                    onchange=setMatReflex
                 )
 
                 def controlObj():
