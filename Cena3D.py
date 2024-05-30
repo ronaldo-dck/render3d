@@ -33,6 +33,8 @@ class Cena3D:
         self.current_shader = 'constante'
         self.is_wireframe = False
         self.is_menu_open = False
+        self.selected_obj = 1
+        self.controling_obj = False
         pg.font.init()
         self.font = pg.font.SysFont(None, 20)
 
@@ -442,12 +444,15 @@ class Cena3D:
             # print(self.camera_pos)
             # faces = o.get_faces()
             vertices = o.get_vertices()
-
+            # ones_column = np.ones((vertices.shape[0], 1))
+            # new_array = np.hstack((vertices, ones_column)).T
+            print(vertices)
             vertices = self.create_objetos() @ vertices.T
             if not self.axis:
                 vertices[[0, 1]] /= vertices[-1]
             # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
+            print(vertices)
             
             # vertices = np.array([
             #     [100,100, 32],
@@ -464,9 +469,11 @@ class Cena3D:
             for face_idx, face in enumerate(faces):
 
                 o.calc_normais_vertices()
-                vet_norm1, vet_norm2, vet_norm3 = [
-                    o.normais_vetores[i] for i in face.vertices]
-                v1, v2, v3 = vertices[face.vertices]
+                try:
+                    vet_norm1, vet_norm2, vet_norm3 = [o.normais_vetores[i] for i in face.vertices]
+                    v1, v2, v3 = vertices[face.vertices]
+                except:
+                    print(len(vertices), face.vertices)
 
                 s1 = np.array(self.camera_pos) - np.array(v1[:3])
                 s1 = s1/np.linalg.norm(s1)
@@ -603,26 +610,54 @@ class Cena3D:
                         self.axis = not self.axis
                     elif event.key == pg.K_m:
                         self.is_wireframe = not self.is_wireframe
-                    elif event.key == pg.K_q:
-                        self.camera_pos[0] -= 1
-                    elif event.key == pg.K_e:
-                        self.camera_pos[0] += 1
-                    elif event.key == pg.K_d:
-                        self.camera_pos[2] += 1
-                    elif event.key == pg.K_a:
-                        self.camera_pos[2] -= 1
-                    elif event.key == pg.K_w:
-                        self.camera_pos[1] += 1
-                    elif event.key == pg.K_s:
-                        self.camera_pos[1] -= 1
-                    elif event.key == pg.K_UP:
-                        self.camera_lookat[1] += 1
-                    elif event.key == pg.K_DOWN:
-                        self.camera_lookat[1] -= 1
-                    elif event.key == pg.K_LEFT:
-                        self.camera_lookat[2] -= 1
-                    elif event.key == pg.K_RIGHT:
-                        self.camera_lookat[2] += 1
+                    elif self.controling_obj:
+                        obj = self.objetos[self.selected_obj]
+                        objPos = obj.get_centro_box_envolvente()
+                        if event.key == pg.K_q:
+                            obj.translado((objPos[0]-1, objPos[1], objPos[2]))
+                        elif event.key == pg.K_e:
+                            obj.translado((objPos[0]+1, objPos[1], objPos[2]))
+                        elif event.key == pg.K_d:
+                            obj.translado((objPos[0], objPos[1], objPos[2]-1))
+                        elif event.key == pg.K_a:
+                            obj.translado((objPos[0], objPos[1], objPos[2]+1))
+                        elif event.key == pg.K_w:
+                            obj.translado((objPos[0], objPos[1]+1, objPos[2]))
+                        elif event.key == pg.K_s:
+                            obj.translado((objPos[0], objPos[1]-1, objPos[2]))
+                        elif event.key == pg.K_UP:
+                            obj.internal_rotate(45, 'X')
+                        elif event.key == pg.K_DOWN:
+                            obj.internal_rotate(-45, 'X')
+                        elif event.key == pg.K_LEFT:
+                            obj.internal_rotate(45, 'Y')
+                        elif event.key == pg.K_RIGHT:
+                            obj.internal_rotate(-45, 'Y')
+                        elif event.key == pg.K_z:
+                            obj.internal_rotate(45, 'Z')
+                        elif event.key == pg.K_x:
+                            obj.internal_rotate(-45, 'Z')
+                    else:
+                        if event.key == pg.K_q:
+                            self.camera_pos[0] -= 1
+                        elif event.key == pg.K_e:
+                            self.camera_pos[0] += 1
+                        elif event.key == pg.K_d:
+                            self.camera_pos[2] += 1
+                        elif event.key == pg.K_a:
+                            self.camera_pos[2] -= 1
+                        elif event.key == pg.K_w:
+                            self.camera_pos[1] += 1
+                        elif event.key == pg.K_s:
+                            self.camera_pos[1] -= 1
+                        elif event.key == pg.K_UP:
+                            self.camera_lookat[1] += 1
+                        elif event.key == pg.K_DOWN:
+                            self.camera_lookat[1] -= 1
+                        elif event.key == pg.K_LEFT:
+                            self.camera_lookat[2] -= 1
+                        elif event.key == pg.K_RIGHT:
+                            self.camera_lookat[2] += 1
 
             
         # Define a posição onde o texto será renderizado
@@ -673,55 +708,33 @@ class Cena3D:
                         print('Erro ao parse a string de luz ambiente.')
 
                 menu.add.color_input(
-                    title='Cor_Amb= ',
+                    title='Luz_Amb= ',
                     color_type='rgb',
                     default=tuple(self.luz_ambiente),
                     onchange= setLuzAmbColor
                 )
 
-                def setProj(num):
-                    self.plano_proj = int(num)
-
-                menu.add.text_input(
-                    'Distancia plano proj: ',
-                    default=self.plano_proj,
-                    maxchar=3,
-                    maxwidth=3,
-                    input_type=pgm.locals.INPUT_INT,
-                    cursor_selection_enable=False,
-                    onchange= setProj
-                )
-                
                 #------------------------
 
-                subMenu = pgm.Menu(
-                    theme=settings_menu_theme,
-                    title='Objeto',
-                    width=self.width,
-                    height=self.height
+                items = [str(i) for i in range(len(self.objetos))]
+                
+                def selectObj(text):
+                    self.selected_obj = text[1]
+                
+                menu.add.selector(
+                    'Selecione o obj:\t',
+                    items,
+                    default=self.selected_obj,
+                    onchange=selectObj
                 )
-                subMenu.add.vertical_margin(25)
-                subMenu.add.button(
-                    'Retornar',
-                    pgm.events.BACK,
-                    align=pgm.locals.ALIGN_CENTER
-                )
-
-                for i, _ in enumerate(self.objetos):
-                    menu.add.button(
-                        f"Objeto {i}",
-                        subMenu,
-                        align=pgm.locals.ALIGN_CENTER
-                    )
-
+                
                 def setRotacoes(num):
                     self.rotacoes = int(num)
-                    for obj in self.objetos:
-                        obj.create(int(num))
+                    self.objetos[self.selected_obj].create(int(num))
 
                 menu.add.text_input(
                     'Rotacoes: ',
-                    default=self.rotacoes,
+                    default=self.objetos[self.selected_obj].rotacoes,
                     maxchar=3,
                     maxwidth=3,
                     input_type=pgm.locals.INPUT_INT,
@@ -729,7 +742,50 @@ class Cena3D:
                     onchange= setRotacoes
                 )
 
+                def setMatAmbColor(text):
+                    try:
+                        self.objetos[self.selected_obj].material_a = [float(x) for x in text.strip('()').split(',')]
+                    except ValueError:
+                        print('Erro ao parse a string de luz ambiente.')
+
+                menu.add.text_input(
+                    title='Mat_Amb= ',
+                    default=(self.objetos[self.selected_obj].material_a).__str__(),
+                    onchange=setMatAmbColor
+                )
+
+                def setMatDifColor(text):
+                    try:
+                        self.objetos[self.selected_obj].material_d = [float(x) for x in text.strip('()').split(',')]
+                    except ValueError:
+                        print('Erro ao parse a string de mat dif.')
+
+                menu.add.text_input(
+                    title='Mat_Dif= ',
+                    default=(self.objetos[self.selected_obj].material_d).__str__(),
+                    onchange=setMatDifColor
+                )
+
+                def setMatSpecColor(text):
+                    try:
+                        self.objetos[self.selected_obj].material_s = [float(x) for x in text.strip('()').split(',')]
+                    except ValueError:
+                        print('Erro ao parse a string de mat spec.')
+
+                menu.add.text_input(
+                    title='Mat_Spec= ',
+                    default=(self.objetos[self.selected_obj].material_s).__str__(),
+                    onchange=setMatSpecColor
+                )
+
+                def controlObj():
+                    self.controling_obj = True
+                    self.is_menu_open = False
+                    menu.disable()
+                menu.add.button('Controlar objeto', controlObj)
+
                 def quit():
+                    self.controling_obj = False
                     self.is_menu_open = False
                     menu.disable()
                     # pgm.events.EXIT

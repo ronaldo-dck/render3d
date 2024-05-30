@@ -2,7 +2,6 @@ import pygame
 import sys
 
 from Objeto3d import Objeto3d
-from CenaWireframe import CenaWireframe
 
 class Cena2D:
     def __init__(self):

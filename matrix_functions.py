@@ -18,6 +18,7 @@ def normalize(vector):
     return vector / norm
 
 def rotate_x(a):
+    a  = a * math.pi / 180
     return np.array([
         [1, 0, 0, 0],
         [0, math.cos(a), math.sin(a), 0],
@@ -27,6 +28,7 @@ def rotate_x(a):
 
 
 def rotate_y(a):
+    a  = a * math.pi / 180
     return np.array([
         [math.cos(a), 0, -math.sin(a), 0],
         [0, 1, 0, 0],
@@ -36,6 +38,7 @@ def rotate_y(a):
 
 
 def rotate_z(a):
+    a  = a * math.pi / 180
     return np.array([
         [math.cos(a), math.sin(a), 0, 0],
         [-math.sin(a), math.cos(a), 0, 0],

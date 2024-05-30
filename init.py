@@ -2,7 +2,6 @@ import pygame
 import sys
 from Cena2D import Cena2D
 from Cena3D import Cena3D
-from CenaWireframe import CenaWireframe
 
 
 

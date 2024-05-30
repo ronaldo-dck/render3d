@@ -35,6 +35,7 @@ class Objeto3d:
     def __init__(self, polyline: list) -> None:
         self.__polyline = polyline
         self.normais_vetores = []
+        self.rotacoes = 4
         self.material_a = (0.2, 0.3, 0.4)
         self.material_d = (0.2, 0.3, 0.4)
         self.material_s = (0.2, 0.3, 0.4)
@@ -49,6 +50,7 @@ class Objeto3d:
     def create(self, segments=4):
         """ Cria um modelo 3D rotacionando uma polilinha em torno do eixo X. """
 
+        self.rotacoes = segments
         polyline = [[x, y, 0] for x, y in self.__polyline]
         vertices = []
         faces = []
@@ -83,6 +85,10 @@ class Objeto3d:
         self.__vertices = np.array(vertices)
         self.__faces = np.array(faces)
         self.__edges = np.array(edges)
+        vertices = np.array(vertices)
+        ones_column = np.ones((vertices.shape[0], 1))
+        new_array = np.hstack((vertices, ones_column))
+        self.__vertices_h = new_array
 
     def rotate_point(self, point, angle, axis='x'):
         """ Rotaciona um ponto em torno de um eixo por um determinado ângulo. """
@@ -103,9 +109,10 @@ class Objeto3d:
         return self.__edges
 
     def get_vertices(self):
-        ones_column = np.ones((self.__vertices.shape[0], 1))
-        new_array = np.hstack((self.__vertices, ones_column))
-        return new_array
+        # ones_column = np.ones((self.__vertices.shape[0], 1))
+        # new_array = np.hstack((self.__vertices, ones_column))
+        # return new_array
+        return self.__vertices_h
 
     def rotacao(self, angle, axis):
         if axis == 'Y':
@@ -114,12 +121,16 @@ class Objeto3d:
             vertices = rotate_x(angle)  @ self.get_vertices().T
         if axis == 'Z':
             vertices = rotate_z(angle)  @ self.get_vertices().T
-        
         self.__vertices = vertices.T[:2].T
+        self.__vertices_h = vertices.T
 
     def translado(self, point = (0,0,0)):
-        vertices = translate(point) @ self.get_vertices().T
+        vertices = self.get_vertices()
+        ones_column = np.ones((vertices.shape[0], 1))
+        new_array = np.hstack((vertices, ones_column))
+        vertices = translate(point) @ new_array.T[:4]
         self.__vertices = vertices.T[:2].T
+        self.__vertices_h = vertices.T
 
     def internal_rotate(self, angle, axis):
         G = np.array(self.get_centro_box_envolvente())
