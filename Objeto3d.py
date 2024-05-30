@@ -35,6 +35,7 @@ class Face:
 class Objeto3d:
     def __init__(self, polyline: list) -> None:
         self.__polyline = polyline
+        self.normais_vetores = []
         self.material = (0.2, 0.3, 0.4)
 
     def set_luz(self, material):
