@@ -163,26 +163,34 @@ class Cena3D:
                 z += deltaZ
 
     def gouraud(self, all_vertices, cor_v0, cor_v1, cor_v2):
-        vertices = all_vertices
-        vertices = sorted(vertices, key=lambda v: v[1])
 
+        vertices_with_colors = [
+            {'vertex': all_vertices[0], 'color': cor_v0},
+            {'vertex': all_vertices[1], 'color': cor_v1},
+            {'vertex': all_vertices[2], 'color': cor_v2}
+        ]
+
+        # Sort vertices based on the y-coordinate
+        vertices_with_colors = sorted(vertices_with_colors, key=lambda vc: vc['vertex'][1])
+
+        # Extract sorted vertices and their colors
         v0 = {
-            'x': vertices[0][0],
-            'y': vertices[0][1],
-            'z': vertices[0][2],
-            'color': cor_v0
+            'x': vertices_with_colors[0]['vertex'][0],
+            'y': vertices_with_colors[0]['vertex'][1],
+            'z': vertices_with_colors[0]['vertex'][2],
+            'color': vertices_with_colors[0]['color']
         }
         v1 = {
-            'x': vertices[1][0],
-            'y': vertices[1][1],
-            'z': vertices[1][2],
-            'color': cor_v1
+            'x': vertices_with_colors[1]['vertex'][0],
+            'y': vertices_with_colors[1]['vertex'][1],
+            'z': vertices_with_colors[1]['vertex'][2],
+            'color': vertices_with_colors[1]['color']
         }
         v2 = {
-            'x': vertices[2][0],
-            'y': vertices[2][1],
-            'z': vertices[2][2],
-            'color': cor_v2
+            'x': vertices_with_colors[2]['vertex'][0],
+            'y': vertices_with_colors[2]['vertex'][1],
+            'z': vertices_with_colors[2]['vertex'][2],
+            'color': vertices_with_colors[2]['color']
         }
 
         arestas = [
@@ -301,28 +309,34 @@ class Cena3D:
 
     def phong(self, s, l_unit, all_vertices, vetor_v0, vetor_v1, vetor_v2, obj):
         
-        vertices = all_vertices
-        vertices = sorted(vertices, key=lambda v: v[1])
+        vertices_with_colors = [
+            {'vertex': all_vertices[0], 'color': vetor_v0},
+            {'vertex': all_vertices[1], 'color': vetor_v1},
+            {'vertex': all_vertices[2], 'color': vetor_v2}
+        ]
 
+        # Sort vertices based on the y-coordinate
+        vertices_with_colors = sorted(vertices_with_colors, key=lambda vc: vc['vertex'][1])
+
+        # Extract sorted vertices and their colors
         v0 = {
-            'x': vertices[0][0],
-            'y': vertices[0][1],
-            'z': vertices[0][2],
-            'color': vetor_v0
+            'x': vertices_with_colors[0]['vertex'][0],
+            'y': vertices_with_colors[0]['vertex'][1],
+            'z': vertices_with_colors[0]['vertex'][2],
+            'color': vertices_with_colors[0]['color']
         }
         v1 = {
-            'x': vertices[1][0],
-            'y': vertices[1][1],
-            'z': vertices[1][2],
-            'color': vetor_v1
+            'x': vertices_with_colors[1]['vertex'][0],
+            'y': vertices_with_colors[1]['vertex'][1],
+            'z': vertices_with_colors[1]['vertex'][2],
+            'color': vertices_with_colors[1]['color']
         }
         v2 = {
-            'x': vertices[2][0],
-            'y': vertices[2][1],
-            'z': vertices[2][2],
-            'color': vetor_v2
+            'x': vertices_with_colors[2]['vertex'][0],
+            'y': vertices_with_colors[2]['vertex'][1],
+            'z': vertices_with_colors[2]['vertex'][2],
+            'color': vertices_with_colors[2]['color']
         }
-
         arestas = [
             {
                 'ini': v0,
@@ -446,13 +460,11 @@ class Cena3D:
             vertices = o.get_vertices()
             # ones_column = np.ones((vertices.shape[0], 1))
             # new_array = np.hstack((vertices, ones_column)).T
-            print(vertices)
             vertices = self.create_objetos() @ vertices.T
             if not self.axis:
                 vertices[[0, 1]] /= vertices[-1]
             # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
             vertices = vertices.T
-            print(vertices)
             
             # vertices = np.array([
             #     [100,100, 32],
@@ -469,11 +481,8 @@ class Cena3D:
             for face_idx, face in enumerate(faces):
 
                 o.calc_normais_vertices()
-                try:
-                    vet_norm1, vet_norm2, vet_norm3 = [o.normais_vetores[i] for i in face.vertices]
-                    v1, v2, v3 = vertices[face.vertices]
-                except:
-                    print(len(vertices), face.vertices)
+                vet_norm1, vet_norm2, vet_norm3 = [o.normais_vetores[i] for i in face.vertices]
+                v1, v2, v3 = vertices[face.vertices]
 
                 s1 = np.array(self.camera_pos) - np.array(v1[:3])
                 s1 = s1/np.linalg.norm(s1)
@@ -537,7 +546,6 @@ class Cena3D:
         self.screen.fill((24,24,24))
         for obj_idx, o in enumerate(self.objetos):
             faces = o.get_faces_visible(self.camera_pos)
-            # print(self.camera_pos)
             # faces = o.get_faces()
             vertices = o.get_vertices()
             # ones_column = np.ones((vertices.shape[0], 1))
@@ -614,29 +622,35 @@ class Cena3D:
                         obj = self.objetos[self.selected_obj]
                         objPos = obj.get_centro_box_envolvente()
                         if event.key == pg.K_q:
-                            obj.translado((objPos[0]-1, objPos[1], objPos[2]))
+                            obj.translado((-10, 0, 0))
+                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_e:
-                            obj.translado((objPos[0]+1, objPos[1], objPos[2]))
+                            obj.translado((10, 0, 0))
+                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_d:
-                            obj.translado((objPos[0], objPos[1], objPos[2]-1))
+                            obj.translado((0, 0, -10))
+                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_a:
-                            obj.translado((objPos[0], objPos[1], objPos[2]+1))
+                            obj.translado((0, 0, 10))
+                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_w:
-                            obj.translado((objPos[0], objPos[1]+1, objPos[2]))
+                            obj.translado((0, 10, 0))
+                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_s:
-                            obj.translado((objPos[0], objPos[1]-1, objPos[2]))
+                            obj.translado((0, -10, 0))
+                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_UP:
-                            obj.internal_rotate(45, 'X')
+                            obj.internal_rotate(6, 'X')
                         elif event.key == pg.K_DOWN:
-                            obj.internal_rotate(-45, 'X')
+                            obj.internal_rotate(-6, 'X')
                         elif event.key == pg.K_LEFT:
-                            obj.internal_rotate(45, 'Y')
+                            obj.internal_rotate(6, 'Y')
                         elif event.key == pg.K_RIGHT:
-                            obj.internal_rotate(-45, 'Y')
+                            obj.internal_rotate(-6, 'Y')
                         elif event.key == pg.K_z:
-                            obj.internal_rotate(45, 'Z')
+                            obj.internal_rotate(6, 'Z')
                         elif event.key == pg.K_x:
-                            obj.internal_rotate(-45, 'Z')
+                            obj.internal_rotate(-6, 'Z')
                     else:
                         if event.key == pg.K_q:
                             self.camera_pos[0] -= 1
@@ -678,7 +692,6 @@ class Cena3D:
                 def setLuzPos(text):
                     try:
                         self.luz_pos = [int(x) for x in text.strip('[]').split(',')]
-                        print(self.luz_pos)
                     except ValueError:
                         print('Erro ao parse a string de luz position.')
 
