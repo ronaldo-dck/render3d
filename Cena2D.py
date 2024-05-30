@@ -42,8 +42,7 @@ class Cena2D:
         button_start_rect = pygame.Rect(50, 25, 200, 50)
         button_close_polyline = pygame.Rect(300, 25, 200, 50)
         button_end_rect = pygame.Rect(550, 25, 200, 50)
-        button_3d = pygame.Rect(167, 525, 150, 50)
-        button_2d = pygame.Rect(484, 525, 150, 50)
+        button_3d = pygame.Rect(300, 525, 200, 50)
 
         running = True
         while running:
@@ -77,9 +76,6 @@ class Cena2D:
                         #         # treated_polylines[index].append((polyline[i][0] - self.DRAW_AREA_X, polyline[i][1] - self.DRAW_AREA_Y))
                         #         treated_polylines.append([polyline[i][0] - self.DRAW_AREA_X, polyline[i][1] - self.DRAW_AREA_Y])
                         return "3D", self.polylines
-                    elif button_2d.collidepoint(mouse_pos):
-                        cena = CenaWireframe(self.polylines)
-                        cena.run()
 
             self.screen.fill((255, 255, 255))
             if not self.drawing:
@@ -91,7 +87,6 @@ class Cena2D:
                 self.draw_button(self.screen, button_close_polyline, 'Finalizar fechado', (255, 230, 50))
                 self.draw_button(self.screen, button_end_rect, "Finalizar aberto", (255, 70, 70))
             self.draw_button(self.screen, button_3d, '3D', (200, 200, 200))
-            self.draw_button(self.screen, button_2d, '2D', (200, 200, 200))
             pygame.draw.rect(self.screen, (200, 200, 200), (self.DRAW_AREA_X, self.DRAW_AREA_Y, self.DRAW_AREA_WIDTH, self.DRAW_AREA_HEIGHT), 0)
             self.draw_axes(self.screen)
 

@@ -1,4 +1,5 @@
 import pygame as pg
+import pygame_menu as pgm
 from pygame.locals import *
 # from OpenGL.GL import *
 # from OpenGL.GLUT import *
@@ -19,17 +20,21 @@ class Cena3D:
         self.height = 800
         self.z_buffer = np.full((self.height, self.width), -float('inf'))
         self.cor_buffer = np.full((self.height, self.width, 3), (24, 24, 24))
+        self.rotacoes = 4
         for obj in self.objetos:
-            obj.rotacaoX(4)
+            obj.create(self.rotacoes)
         self.axis = False
         self.luz_pos = [0,0,0]
         self.luz_prop = [255,255,255]
         self.luz_ambiente = [255,255,255]
+        self.plano_proj = 200
         self.camera_pos = [-15, 0, 0]
         self.camera_lookat = [0, 0, 0]
         self.current_shader = 'constante'
+        self.is_wireframe = False
+        self.is_menu_open = False
         pg.font.init()
-        self.font = pg.font.SysFont(None, 36)
+        self.font = pg.font.SysFont(None, 20)
 
     def create_objetos(self):
         near = 0.1
@@ -39,7 +44,7 @@ class Cena3D:
         recort3d = np.identity(4)
         
         self.camera = Camera(self.camera_pos, self.camera_lookat, (0, 1, 0))
-        self.projetion = Projetion().projetion_matrix(200)
+        self.projetion = Projetion().projetion_matrix(self.plano_proj)
         if self.axis:
             self.projetion = np.array([
                 [1, 0, 0, 0],
@@ -122,11 +127,11 @@ class Cena3D:
             deltaZ = (v1['z'] - v0['z']) / varX
             for j in range(intervalo[0], intervalo[1]):
                 # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
-                    if z > self.z_buffer[j, y]:
-                        self.cor_buffer[j, y] = color
-                        # self.screen.set_at((j, y), color)
-                        self.z_buffer[j, y] = z
-                    z += deltaZ
+                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                    self.cor_buffer[j, y] = color
+                    # self.screen.set_at((j, y), color)
+                    self.z_buffer[j, y] = z
+                z += deltaZ
 
         swaped = False
         lastIniX = arestas[1]['ini']['x']
@@ -149,11 +154,11 @@ class Cena3D:
 
             for j in range(intervalo[0], intervalo[1]):
                 # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
-                    if z > self.z_buffer[j, y]:
-                        # self.screen.set_at((j, y), color)
-                        self.z_buffer[j, y] = z
-                        self.cor_buffer[j, y] = color
-                    z += deltaZ
+                if j < self.width and y < self.height and z > self.z_buffer[j, y]:
+                    # self.screen.set_at((j, y), color)
+                    self.z_buffer[j, y] = z
+                    self.cor_buffer[j, y] = color
+                z += deltaZ
 
     def gouraud(self, all_vertices, cor_v0, cor_v1, cor_v2):
         vertices = all_vertices
@@ -291,7 +296,6 @@ class Cena3D:
 
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
-
 
     def phong(self, s, l_unit, all_vertices, vetor_v0, vetor_v1, vetor_v2, obj):
         
@@ -438,10 +442,8 @@ class Cena3D:
             # print(self.camera_pos)
             # faces = o.get_faces()
             vertices = o.get_vertices()
-            ones_column = np.ones((vertices.shape[0], 1))
-            new_array = np.hstack((vertices, ones_column))
 
-            vertices = self.create_objetos() @ new_array.T[:4]
+            vertices = self.create_objetos() @ vertices.T
             if not self.axis:
                 vertices[[0, 1]] /= vertices[-1]
             # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
@@ -520,28 +522,54 @@ class Cena3D:
         # pg.display.flip()
 
 
+    def transformada(self):
+        pass
+
+    def wireframe(self):
+
+        self.screen.fill((24,24,24))
+        for obj_idx, o in enumerate(self.objetos):
+            faces = o.get_faces_visible(self.camera_pos)
+            # print(self.camera_pos)
+            # faces = o.get_faces()
+            vertices = o.get_vertices()
+            # ones_column = np.ones((vertices.shape[0], 1))
+            # new_array = np.hstack((vertices, ones_column))
+
+            vertices = self.create_objetos() @ vertices.T[:4]
+            if not self.axis:
+                vertices[[0, 1]] /= vertices[-1]
+            # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
+            vertices = np.array(vertices[:2].T).astype(int)
+
+            for face_idx, face in enumerate(faces):
+                pg.draw.polygon(self.screen, (255,200,0), vertices[face.vertices], width=1)
+             
+        # pg.display.flip()
+
+
+
     def draw_button(self, screen, rect, text, color):
         pg.draw.rect(screen, color, rect)
         text_surf = self.font.render(text, True, (0, 0, 0))
         text_rect = text_surf.get_rect(center=rect.center)
         screen.blit(text_surf, text_rect)
 
-
-    def draw_mouse_coords(self, screen, x, y):
-        coord_text = f"X: {x}, Y: {y}"
-        # text_surf = self.font.render(coord_text, True, (0, 255, 255))
-        # print(coord_text)
-        # screen.blit(text_surf, (10, 70))
-
     def draw_cam_coords(self, screen, x, y, z):
         coord_text = f"X: {x}, Y: {y}, Z: {z}"
         text_surf = self.font.render(coord_text, True, (100, 100, 100))
-        screen.blit(text_surf, (10, 140))
+        screen.blit(text_surf, (10, 10))
 
     def draw_lookat_coords(self, screen, x, y, z):
         coord_text = f"X: {x}, Y: {y}, Z: {z}"
         text_surf = self.font.render(coord_text, True, (100, 100, 200))
-        screen.blit(text_surf, (10, 105))
+        screen.blit(text_surf, (10, 30))
+
+    def draw_render_options(self, screen): 
+        text = '1 - Constante | 2 - Gouraud | 3 - Phong | P - Alternar Perspectiva | M - Alternar Wireframe'
+        text_surf = self.font.render(text, True, (100, 100, 100))
+        screen.blit(text_surf, (150, 10))
+    
 
     def run(self):
         pg.init()
@@ -549,17 +577,11 @@ class Cena3D:
         self.screen = pg.display.set_mode(size, display=0)
         clock = pg.time.Clock()
 
-        button_pespctiva = pg.Rect(50,50,100,50)
-
         running = True
         while running:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     running = False
-                elif event.type == pg.MOUSEBUTTONDOWN:
-                    mouse_pos = pg.mouse.get_pos()
-                    if button_pespctiva.collidepoint(mouse_pos):
-                        self.axis = not self.axis
                 elif event.type == pg.VIDEORESIZE:
                     self.width = event.w
                     self.height = event.h
@@ -570,7 +592,7 @@ class Cena3D:
 
                 elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
-                        running = False
+                        self.is_menu_open = not self.is_menu_open
                     elif event.key == pg.K_1:
                         self.current_shader = 'constante'
                     elif event.key == pg.K_2:
@@ -579,6 +601,8 @@ class Cena3D:
                         self.current_shader = 'phong'
                     elif event.key == pg.K_p:
                         self.axis = not self.axis
+                    elif event.key == pg.K_m:
+                        self.is_wireframe = not self.is_wireframe
                     elif event.key == pg.K_q:
                         self.camera_pos[0] -= 1
                     elif event.key == pg.K_e:
@@ -601,20 +625,129 @@ class Cena3D:
                         self.camera_lookat[2] += 1
 
             
-
-                # Obtém a posição atual do mouse
-            mouse_x, mouse_y = pg.mouse.get_pos()
-
         # Define a posição onde o texto será renderizado
             # self.screen.fill(pg.Color('darkslategray'))
-            self.render()
-            # self.draw_vertices()
-            self.draw_mouse_coords(self.screen, mouse_x, mouse_y)
-            self.draw_cam_coords(
-                self.screen, self.camera_pos[0], self.camera_pos[1], self.camera_pos[2])
-            self.draw_lookat_coords(
-                self.screen, self.camera_lookat[0], self.camera_lookat[1], self.camera_lookat[2])
-            self.draw_button(self.screen, button_pespctiva, 'Pespctiva', (155,100,100))
+
+            if self.is_menu_open:
+                settings_menu_theme = pgm.themes.THEME_DARK.copy()
+                settings_menu_theme.title_offset = (5, -2)
+                settings_menu_theme.widget_alignment = pgm.locals.ALIGN_LEFT
+                settings_menu_theme.widget_font_size = 20
+                menu = pgm.Menu(
+                    theme=settings_menu_theme,
+                    title='Configuração',
+                    width=self.width,
+                    height=self.height
+                )
+
+                def setLuzPos(text):
+                    try:
+                        self.luz_pos = [int(x) for x in text.strip('[]').split(',')]
+                        print(self.luz_pos)
+                    except ValueError:
+                        print('Erro ao parse a string de luz position.')
+
+                menu.add.text_input(
+                    title='Pos_Luz= ',
+                    default=self.luz_pos.__str__(),
+                    onreturn= setLuzPos
+                )
+
+                def setLuzColor(color):
+                    try:
+                        self.luz_prop = color
+                    except ValueError:
+                        print('Erro ao parse a string de luz color.')
+
+                menu.add.color_input(
+                    title='Cor_Luz= ',
+                    color_type='rgb',
+                    default=tuple(self.luz_prop),
+                    onchange= setLuzColor
+                )
+
+                def setLuzAmbColor(color):
+                    try:
+                        self.luz_ambiente = color
+                    except ValueError:
+                        print('Erro ao parse a string de luz ambiente.')
+
+                menu.add.color_input(
+                    title='Cor_Amb= ',
+                    color_type='rgb',
+                    default=tuple(self.luz_ambiente),
+                    onchange= setLuzAmbColor
+                )
+
+                def setProj(num):
+                    self.plano_proj = int(num)
+
+                menu.add.text_input(
+                    'Distancia plano proj: ',
+                    default=self.plano_proj,
+                    maxchar=3,
+                    maxwidth=3,
+                    input_type=pgm.locals.INPUT_INT,
+                    cursor_selection_enable=False,
+                    onchange= setProj
+                )
+                
+                #------------------------
+
+                subMenu = pgm.Menu(
+                    theme=settings_menu_theme,
+                    title='Objeto',
+                    width=self.width,
+                    height=self.height
+                )
+                subMenu.add.vertical_margin(25)
+                subMenu.add.button(
+                    'Retornar',
+                    pgm.events.BACK,
+                    align=pgm.locals.ALIGN_CENTER
+                )
+
+                for i, _ in enumerate(self.objetos):
+                    menu.add.button(
+                        f"Objeto {i}",
+                        subMenu,
+                        align=pgm.locals.ALIGN_CENTER
+                    )
+
+                def setRotacoes(num):
+                    self.rotacoes = int(num)
+                    for obj in self.objetos:
+                        obj.create(int(num))
+
+                menu.add.text_input(
+                    'Rotacoes: ',
+                    default=self.rotacoes,
+                    maxchar=3,
+                    maxwidth=3,
+                    input_type=pgm.locals.INPUT_INT,
+                    cursor_selection_enable=False,
+                    onchange= setRotacoes
+                )
+
+                def quit():
+                    self.is_menu_open = False
+                    menu.disable()
+                    # pgm.events.EXIT
+                menu.add.button('Sair', quit)
+
+                menu.mainloop(self.screen)
+            else:
+                if self.is_wireframe:
+                    self.wireframe()
+                else:
+                    self.render()
+                # self.draw_vertices()
+                self.draw_cam_coords(
+                    self.screen, self.camera_pos[0], self.camera_pos[1], self.camera_pos[2])
+                self.draw_lookat_coords(
+                    self.screen, self.camera_lookat[0], self.camera_lookat[1], self.camera_lookat[2])
+                self.draw_render_options(self.screen)
+
 
             pg.display.flip()
             clock.tick(24)  # Limita o loop a 60 frames por segundo

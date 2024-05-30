@@ -30,10 +30,7 @@ class CenaPrincipal:
     def update(self):
         # self.cena2 = Cena3D(self.current_cena.run())
         retorno, poli = self.current_cena.run()
-        if retorno == '2D':
-            self.cena2 = CenaWireframe(poli)
-        else:
-            self.cena2 = Cena3D(poli)
+        self.cena2 = Cena3D(poli)
         self.trocar_cena()
 
     def draw(self, surface):

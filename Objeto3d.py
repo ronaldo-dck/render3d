@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from camera import Camera, Projetion
+from matrix_functions import *
 
 
 class Face:
@@ -45,7 +46,7 @@ class Objeto3d:
         self.material_s = mateirial_s
         self.index_reflex = n
 
-    def rotacaoX(self, segments=4):
+    def create(self, segments=4):
         """ Cria um modelo 3D rotacionando uma polilinha em torno do eixo X. """
 
         polyline = [[x, y, 0] for x, y in self.__polyline]
@@ -105,6 +106,37 @@ class Objeto3d:
         ones_column = np.ones((self.__vertices.shape[0], 1))
         new_array = np.hstack((self.__vertices, ones_column))
         return new_array
+
+    def rotacao(self, angle, axis):
+        if axis == 'Y':
+            vertices = rotate_y(angle)  @ self.get_vertices().T
+        if axis == 'X':
+            vertices = rotate_x(angle)  @ self.get_vertices().T
+        if axis == 'Z':
+            vertices = rotate_z(angle)  @ self.get_vertices().T
+        
+        self.__vertices = vertices.T[:2].T
+
+    def translado(self, point = (0,0,0)):
+        vertices = translate(point) @ self.get_vertices().T
+        self.__vertices = vertices.T[:2].T
+
+    def internal_rotate(self, angle, axis):
+        G = np.array(self.get_centro_box_envolvente())
+        if axis == 'Y':
+            vertices = translate(G) @ rotate_y(angle) @ translate(-G)  @ self.get_vertices().T
+        if axis == 'X':
+            vertices = translate(G) @ rotate_y(angle) @ translate(-G)  @ self.get_vertices().T
+        if axis == 'Z':
+            vertices = translate(G) @ rotate_y(angle) @ translate(-G)  @ self.get_vertices().T
+        
+        self.__vertices = vertices.T[:2].T
+
+
+    def scale(self, fator):
+        vertices = translate(fator) @ self.get_vertices().T
+        self.__vertices = vertices.T[:2].T
+
 
     def get_centro_box_envolvente(self):
         vertices_array = np.array(self.__vertices)
