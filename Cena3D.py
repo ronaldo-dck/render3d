@@ -8,7 +8,7 @@ import random
 from camera import Camera, Projetion
 from recorte2d import *
 import luz
-
+import traceback
 import numpy as np
 
 
@@ -18,12 +18,11 @@ class Cena3D:
         self.width = 800
         self.height = 800
         self.z_buffer = np.full((self.height, self.width), -float('inf'))
-        print(self.z_buffer.shape)
         for obj in self.objetos:
             obj.rotacaoX(4)
         self.axis = True
-        self.camera_pos = [-1, 0, 0]
-        self.camera_lookat = [0, 0, 0]
+        self.camera_pos = [-1, 300, 200]
+        self.camera_lookat = [100, 0, 0]
         pg.font.init()
         self.font = pg.font.SysFont(None, 36)
 
@@ -194,10 +193,11 @@ class Cena3D:
                          for i in range(3)]
             color_fim = [color_fim[i] + arestas[2]['taxaColor'][i]
                          for i in range(3)]
-
+            
             intervalo = [lastIniX, lastFimX]
             tempColorIni = color_ini[:]
             tempColorFim = color_fim[:]
+            
             if intervalo[1] < intervalo[0]:
                 swaped = True
                 intervalo[0], intervalo[1] = intervalo[1], intervalo[0]
@@ -209,23 +209,22 @@ class Cena3D:
             z = v0['z']
             varX = intervalo[1] - intervalo[0] + 1e-16
             deltaZ = (v1['z'] - v0['z']) / varX
-            color_step = [(tempColorFim[i] - tempColorIni[i]) /
-                          varX for i in range(3)]
+            color_step = [(tempColorFim[i] - tempColorIni[i]) / varX for i in range(3)]
 
             current_color = tempColorIni[:]
+
             for j in range(intervalo[0], intervalo[1]):
-                # essa linha tem de sair quando for integrado com o recort2d
-                if j > 0 and y > 0 and j < self.z_buffer.shape[0] and y < self.height:
+                if z > self.z_buffer[j, y]:
                     try:
-                        if z > self.z_buffer[j, y]:
-                            self.screen.set_at(
-                                (j, y), tuple(map(int, current_color)))
-                            self.z_buffer[j, y] = z
+                        self.screen.set_at(
+                        (j, y), tuple(map(int, current_color)))
+                        print(y,current_color)
                     except:
-                        print(j, y, 'shape: ', self.z_buffer.shape)
+                        print(y, np.array(current_color).astype(int), traceback.format_exc())
+                        exit()
+                    self.z_buffer[j, y] = z
                 z += deltaZ
-                current_color = [current_color[i] + color_step[i]
-                                 for i in range(3)]
+                current_color = [current_color[i] + color_step[i] for i in range(3)]
 
         if not swaped:
             lastIniX = arestas[1]['ini']['x']
@@ -254,100 +253,110 @@ class Cena3D:
             z = v1['z']
             varX = intervalo[1] - intervalo[0]
             deltaZ = (v2['z'] - v1['z']) / varX
-            color_step = [(tempColorFim[i] - tempColorIni[i]) /
-                          varX for i in range(3)]
+            color_step = [(tempColorFim[i] - tempColorIni[i]) / varX for i in range(3)]
 
             current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
-                # essa linha tem de sair quando for integrado com o recort2d
-                if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
-                    if z > self.z_buffer[j, y]:
-                        try:
-                            self.screen.set_at(
-                                (j, y), tuple(map(int, current_color)))
-                        except:
-                            print(tuple(map(int, current_color)))
-                        self.z_buffer[j, y] = z
+                if z > self.z_buffer[j, y]:
+                    try:
+                        self.screen.set_at((j, y), np.array(current_color).astype(int))
+                        print(y,current_color)
+                    except Exception as e:
+                        print(y, np.array(current_color).astype(int), traceback.format_exc())
+                        exit()
+
+                    self.z_buffer[j, y] = z
+
                 z += deltaZ
-                current_color = [current_color[i] + color_step[i]
-                                 for i in range(3)]
+                current_color = [current_color[i] + color_step[i] for i in range(3)]
 
     def render(self):
         for obj_idx, o in enumerate(self.objetos):
-            # faces = o.get_faces_visible(self.camera_pos)
-            # # faces = o.get_faces()
-            # vertices = o.get_vertices()
-            # ones_column = np.ones((vertices.shape[0], 1))
-            # new_array = np.hstack((vertices, ones_column))
+            faces = o.get_faces_visible(self.camera_pos)
+            # faces = o.get_faces()
+            vertices = o.get_vertices()
+            ones_column = np.ones((vertices.shape[0], 1))
+            new_array = np.hstack((vertices, ones_column))
 
-            # vertices = self.create_objetos() @ new_array.T[:4]
-            # if not self.axis:
-            #     vertices[[0, 1]] /= vertices[-1]
-            # # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
-            # vertices = vertices.T
+            vertices = self.create_objetos() @ new_array.T[:4]
+            if not self.axis:
+                vertices[[0, 1]] /= vertices[-1]
+            # vertices[[0, 1]] = np.round(vertices[[0, 1]], 1)
+            vertices = vertices.T
 
-            vertices = np.array([
-                [100,100, 32],
-                [100,440,24],
-                [200,200,23],
-                [440,140,32]
-            ])
-            faces = []
-            faces.append(Face(vertices, [0,3,2]))
-            faces.append(Face(vertices, [2,1,3]))
-            faces.append(Face(vertices, [0,1,2]))
-            faces.append(Face(vertices, [0,1,2]))
+            # vertices = np.array([
+            #     [100,100, 32],
+            #     [100,440,24],
+            #     [200,200,23],
+            #     [440,140,32]
+            # ])
+            # faces = []
+            # faces.append(Face(vertices, [0,3,2]))
+            # faces.append(Face(vertices, [2,1,3]))
+            # faces.append(Face(vertices, [0,1,2]))
+            # faces.append(Face(vertices, [0,1,2]))
             # faces.append(Face(vertices, [1,2,3])) # Esse aqui apresenta erro
             for face_idx, face in enumerate(faces):
 
-                # o.calc_normais_vertices()
-                # vet_norm1, vet_norm2, vet_norm3 = [
-                #     o.normais_vetores[i] for i in face.vertices]
-                # v1, v2, v3 = vertices[face.vertices]
+                o.calc_normais_vertices()
+                vet_norm1, vet_norm2, vet_norm3 = [
+                    o.normais_vetores[i] for i in face.vertices]
+                v1, v2, v3 = vertices[face.vertices]
 
-                # s1 = np.array(self.camera_pos) - np.array(v1[:3])
-                # s1 = s1/np.linalg.norm(s1)
-                # s2 = np.array(self.camera_pos) - np.array(v2[:3])
-                # s2 = s2/np.linalg.norm(s2)
-                # s3 = np.array(self.camera_pos) - np.array(v3[:3])
-                # s3 = s3/np.linalg.norm(s3)
+                s1 = np.array(self.camera_pos) - np.array(v1[:3])
+                s1 = s1/np.linalg.norm(s1)
+                s2 = np.array(self.camera_pos) - np.array(v2[:3])
+                s2 = s2/np.linalg.norm(s2)
+                s3 = np.array(self.camera_pos) - np.array(v3[:3])
+                s3 = s3/np.linalg.norm(s3)
 
-                # cor1 = luz.calc_luz(s1, v1[:3], vet_norm1, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                #     0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
-                # cor2 = luz.calc_luz(s2, v2[:3], vet_norm2, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                #     0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
-                # cor3 = luz.calc_luz(s3, v3[:3], vet_norm3, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                #     0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
+                cor1 = luz.calc_luz(s1, v1[:3], vet_norm1, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
+                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
+                cor2 = luz.calc_luz(s2, v2[:3], vet_norm2, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
+                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
+                cor3 = luz.calc_luz(s3, v3[:3], vet_norm3, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
+                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), (0, 0, 0), 3)
 
-                # cor1 = np.array(cor1).astype(int)
-                # cor2 = np.array(cor2).astype(int)
-                # cor3 = np.array(cor3).astype(int)
+                cor1 = np.array(cor1).astype(int)
+                cor2 = np.array(cor2).astype(int)
+                cor3 = np.array(cor3).astype(int)
 
-                # s = np.array(self.camera_pos) - np.array(face.centroide)
-                # s = s/np.linalg.norm(s)
-                # cor = luz.calc_luz(s, face.centroide, face.normal, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
-                #     0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), self.camera_pos, 3)
-                # cor = np.array(cor).astype(int)
+                s = np.array(self.camera_pos) - np.array(face.centroide)
+                s = s/np.linalg.norm(s)
 
-                cor1 = (255, 0, 0)
-                cor2 = (0, 255, 0)
-                cor3 = (0, 0, 255)
-                cor = cor1
+                cor = luz.calc_luz(s, face.centroide, face.normal, (0.2, 0.3, 0.4), (0.5, 0.3, 0.1), (
+                    0.2, 0.3, 0.1), (255, 255, 255), (255, 255, 255), self.camera_pos, 3)
+                
+                cor = np.array(cor).astype(int)
+
+                # cor1 = (255, 0, 0)
+                # cor2 = (0, 255, 0)
+                # cor3 = (0, 0, 255)
+                # cor = cor1
 
                 clip_face, clip_face_colors = sutherland_hodgman_clip(
-                    vertices[face.vertices], [cor1, cor2, cor3], 0, 0, 300, self.height)
+                    vertices[face.vertices], [cor1, cor2, cor3], 0, 0, self.width, self.height)
                 
-                triangles, triangles_colors = triangulate_convex_polygon(clip_face, clip_face_colors)
-                print(triangles_colors)
+                # print(clip_face)
+                if len(clip_face) > 0:
+                    triangles, triangles_colors = triangulate_convex_polygon(clip_face, clip_face_colors)
 
-                for t, tc in zip(triangles, triangles_colors):
-                    self.gouraud(t, tc[0], tc[1], tc[2])
+                    for t, tc in zip(triangles, triangles_colors):
+                        self.gouraud(t, tc[0], tc[1], tc[2])
                     # self.gouraud(t, cor, cor, cor)
                 # self.fillpoli(face, vertices, cor)
                 # self.constante(face, vertices, cor)
 
             self.draw_vertices(vertices.T[:2].T)
             pg.display.flip()
+
+
+    def draw_button(self, screen, rect, text, color):
+        pg.draw.rect(screen, color, rect)
+        text_surf = self.font.render(text, True, (0, 0, 0))
+        text_rect = text_surf.get_rect(center=rect.center)
+        screen.blit(text_surf, text_rect)
+
 
     def draw_mouse_coords(self, screen, x, y):
         coord_text = f"X: {x}, Y: {y}"
@@ -371,11 +380,17 @@ class Cena3D:
         self.screen = pg.display.set_mode(size, display=0)
         clock = pg.time.Clock()
 
+        button_pespctiva = pg.Rect(50,50,100,50)
+
         running = True
         while running:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     running = False
+                elif event.type == pg.MOUSEBUTTONDOWN:
+                    mouse_pos = pg.mouse.get_pos()
+                    if button_pespctiva.collidepoint(mouse_pos):
+                        self.axis = not self.axis
                 elif event.type == pg.VIDEORESIZE:
                     self.width = event.w
                     self.height = event.h
@@ -408,6 +423,9 @@ class Cena3D:
                     elif event.key == pg.K_RIGHT:
                         self.camera_lookat[0] += 1
 
+            self.draw_button(self.screen, button_pespctiva, 'Pespctiva', (155,100,100))
+            
+
                 # Obtém a posição atual do mouse
             mouse_x, mouse_y = pg.mouse.get_pos()
 
@@ -436,5 +454,4 @@ if __name__ == '__main__':
         # ((-10, 10), (10, 10))
     ]
     cena = Cena3D(polylines)
-    print(cena.z_buffer.shape)
     cena.run()
