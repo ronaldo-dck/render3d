@@ -56,10 +56,10 @@ while True:
     cena_principal.update()
 
     # Desenha a cena principal
-    cena_principal.draw(screen)
+    # cena_principal.draw(screen)
 
     # Atualiza a tela
-    pygame.display.flip()
+    # pygame.display.flip()
 
     # Controla a taxa de frames por segundo
     clock.tick(30)

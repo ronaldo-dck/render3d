@@ -18,17 +18,18 @@ class Cena3D:
         self.width = 800
         self.height = 800
         self.z_buffer = np.full((self.height, self.width), -float('inf'))
+        self.cor_buffer = np.full((self.height, self.width, 3), (24, 24, 24))
         for obj in self.objetos:
             obj.rotacaoX(4)
         self.axis = True
-        self.camera_pos = [-1, 300, 200]
-        self.camera_lookat = [100, 0, 0]
+        self.camera_pos = [-10, 0, 0]
+        self.camera_lookat = [0, 0, 0]
         pg.font.init()
         self.font = pg.font.SysFont(None, 36)
 
     def create_objetos(self):
         self.camera = Camera(self.camera_pos, self.camera_lookat, (0, 1, 0))
-        self.projetion = Projetion().projetion_matrix(200)
+        self.projetion = Projetion().projetion_matrix(10)
         if self.axis:
             self.projetion = np.array([
                 [1, 0, 0, 0],
@@ -216,9 +217,9 @@ class Cena3D:
             for j in range(intervalo[0], intervalo[1]):
                 if z > self.z_buffer[j, y]:
                     try:
-                        self.screen.set_at(
-                        (j, y), tuple(map(int, current_color)))
-                        print(y,current_color)
+                        # self.screen.set_at((j, y), tuple(map(int, current_color)))
+                        self.cor_buffer[j, y] = current_color
+                        # print(y,current_color)
                     except:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
@@ -259,8 +260,9 @@ class Cena3D:
             for j in range(intervalo[0], intervalo[1]):
                 if z > self.z_buffer[j, y]:
                     try:
-                        self.screen.set_at((j, y), np.array(current_color).astype(int))
-                        print(y,current_color)
+                        # self.screen.set_at((j, y), np.array(current_color).astype(int))
+                        self.cor_buffer[j, y] = current_color
+                        # print(y,current_color)
                     except Exception as e:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
@@ -335,7 +337,7 @@ class Cena3D:
                 # cor = cor1
 
                 clip_face, clip_face_colors = sutherland_hodgman_clip(
-                    vertices[face.vertices], [cor1, cor2, cor3], 0, 0, self.width, self.height)
+                    vertices[face.vertices], [cor1, cor2, cor3], 0, 0, self.width-1, self.height)
                 
                 # print(clip_face)
                 if len(clip_face) > 0:
@@ -343,12 +345,17 @@ class Cena3D:
 
                     for t, tc in zip(triangles, triangles_colors):
                         self.gouraud(t, tc[0], tc[1], tc[2])
+                    
                     # self.gouraud(t, cor, cor, cor)
                 # self.fillpoli(face, vertices, cor)
                 # self.constante(face, vertices, cor)
-
-            self.draw_vertices(vertices.T[:2].T)
-            pg.display.flip()
+        surf = pg.surfarray.make_surface(self.cor_buffer)
+        self.screen.blit(surf, (0, 0))
+        self.draw_vertices(vertices.T[:2].T)
+        pg.display.flip()
+        self.cor_buffer = np.full((self.height, self.width, 3), (24, 24, 24))
+        self.z_buffer = np.full((self.height, self.width), -float('inf'))
+        # pg.display.flip()
 
 
     def draw_button(self, screen, rect, text, color):
@@ -402,26 +409,26 @@ class Cena3D:
                 elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
                         running = False
-                    elif event.key == pg.K_a:
-                        self.camera_pos[0] -= 1
-                    elif event.key == pg.K_d:
-                        self.camera_pos[0] += 1
-                    elif event.key == pg.K_w:
-                        self.camera_pos[2] += 1
-                    elif event.key == pg.K_s:
-                        self.camera_pos[2] -= 1
                     elif event.key == pg.K_q:
-                        self.camera_pos[1] += 1
+                        self.camera_pos[0] -= 1
                     elif event.key == pg.K_e:
+                        self.camera_pos[0] += 1
+                    elif event.key == pg.K_d:
+                        self.camera_pos[2] += 1
+                    elif event.key == pg.K_a:
+                        self.camera_pos[2] -= 1
+                    elif event.key == pg.K_w:
+                        self.camera_pos[1] += 1
+                    elif event.key == pg.K_s:
                         self.camera_pos[1] -= 1
                     elif event.key == pg.K_UP:
                         self.camera_lookat[1] += 1
                     elif event.key == pg.K_DOWN:
                         self.camera_lookat[1] -= 1
                     elif event.key == pg.K_LEFT:
-                        self.camera_lookat[0] -= 1
+                        self.camera_lookat[2] -= 1
                     elif event.key == pg.K_RIGHT:
-                        self.camera_lookat[0] += 1
+                        self.camera_lookat[2] += 1
 
             self.draw_button(self.screen, button_pespctiva, 'Pespctiva', (155,100,100))
             
@@ -450,8 +457,8 @@ if __name__ == '__main__':
         # (((1, 0), (-1, 1), (1, 1), (1, 0))),
         # (((100, 0), (-200, 200), (-100, -100), (100, 0)))
         # Novo objeto adicionado
-        ((100, 100), (150, 100), (200, 200))
-        # ((-10, 10), (10, 10))
+        ((100, 100), (150, 100), (200, 200)),
+        ((-10, 10), (10, 10))
     ]
     cena = Cena3D(polylines)
     cena.run()

@@ -12,7 +12,7 @@ class Cena2D:
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Desenho de Polylines")
 
-        self.polylines = []
+        self.polylines = [[(0,0)]]
         self.current_polyline = []
         self.drawing = False
 
