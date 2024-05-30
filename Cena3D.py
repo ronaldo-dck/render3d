@@ -675,6 +675,18 @@ class Cena3D:
                     height=self.height
                 )
 
+                def setProj(num):
+                    self.plano_proj = int(num)
+
+                menu.add.text_input(
+                    'Dist Proj: ',
+                    default=self.plano_proj,
+                    maxchar=3,
+                    maxwidth=3,
+                    input_type=pgm.locals.INPUT_INT,
+                    onchange= setProj
+                )
+
                 def setLuzPos(text):
                     try:
                         self.luz_pos = [int(x) for x in text.strip('[]').split(',')]
