@@ -6,6 +6,7 @@ from OpenGL.GLU import *
 from Objeto3d import Objeto3d, Face
 import random
 from camera import Camera, Projetion
+from recorte2d import sutherland_hodgman_clip, triangulate_convex_polygon
 import luz
 
 import numpy as np
@@ -168,8 +169,8 @@ class Cena3D:
 
                 pass
 
-    def fillpoli(self, face, all_vertices, color):
-        vertices = all_vertices[face.vertices]
+    def fillpoli(self, all_vertices, color):
+        vertices = all_vertices
         # self.poly.pontos.sort(key=lambda p: p['y'])
         # v0, v1, v2 = self.poly.pontos[0], self.poly.pontos[1], self.poly.pontos[2]
 
@@ -233,10 +234,10 @@ class Cena3D:
             varX = intervalo[1] - intervalo[0] + 1e-16
             deltaZ = (v1['z'] - v0['z']) / varX
             for j in range(intervalo[0], intervalo[1]):
-                if j >= 0 and y >= 0 and j < self.width and y < self.height: 
-                    if z > self.z_buffer[j, y]:
-                        self.screen.set_at((j, y), color)
-                        self.z_buffer[j,y] = z
+                # if j >= 0 and y >= 0 and j < self.width and y < self.height: 
+                if z > self.z_buffer[j, y]:
+                    self.screen.set_at((j, y), color)
+                    self.z_buffer[j,y] = z
                 z += deltaZ
 
         swaped = False
@@ -259,10 +260,10 @@ class Cena3D:
             deltaZ = (v2['z'] - v1['z']) / varX
 
             for j in range(intervalo[0], intervalo[1]):
-                if j >= 0 and y >= 0 and j < self.width and y < self.height: 
-                    if z > self.z_buffer[j, y]:
-                        self.screen.set_at((j, y), color)
-                        self.z_buffer[j,y] = z
+                # if j >= 0 and y >= 0 and j < self.width and y < self.height: 
+                if z > self.z_buffer[j, y]:
+                    self.screen.set_at((j, y), color)
+                    self.z_buffer[j,y] = z
                 z += deltaZ
 
 
@@ -376,14 +377,15 @@ class Cena3D:
             current_color = color_ini[:]
             for j in range(intervalo[0], intervalo[1]):
                 if j >= 0 and y >= 0 and j < self.width and y < self.height:
-                    if z > self.z_buffer[j, y]:
-                        try:
-                            self.screen.set_at((j, y), tuple(map(int, current_color)))
-                        except:
-                            print(tuple(map(int, current_color)))
-                        self.z_buffer[j, y] = z
+                        if z > self.z_buffer[j, y]:
+                            try:
+                                self.screen.set_at((j, y), tuple(map(int, current_color)))
+                            except:
+                                print(tuple(map(int, current_color)))
+                            self.z_buffer[j, y] = z
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
+
 
 
     def render(self):
@@ -401,36 +403,48 @@ class Cena3D:
             # vertices = vertices.T
 
             vertices = np.array([
-                [100,100, 32],
+                [-100,100, 32],
                 [100,440,24],
                 [200,200,23],
-                [440,140,32]
+                [440,140,32],
+                [234, 600, 23],
+                [700, 600, 23],
             ])
             faces = []
             faces.append(Face(vertices, [0,3,2]))
+            faces.append(Face(vertices, [1,0,4]))
+            faces.append(Face(vertices, [0,4,5]))
+
+           
             # faces.append(Face(vertices, [0,1,2]))
             # faces.append(Face(vertices, [1,2,3])) # Esse aqui apresenta erro 
             for face_idx, face in enumerate(faces):
-                # s = np.array(self.camera_pos) - np.array(face.centroide)
-                # s = s/np.linalg.norm(s)
-                # cor = luz.calc_luz(s, face.centroide, face.normal, (0.2,0.3,0.4),(0.5,0.3,0.1),(0.2,0.3,0.1),(255,255,255),(255,255,255), (0,0,0), 3)
+                s = np.array(self.camera_pos) - np.array(face.centroide)
+                s = s/np.linalg.norm(s)
+                cor = luz.calc_luz(s, face.centroide, face.normal, (0.2,0.3,0.4),(0.5,0.3,0.1),(0.2,0.3,0.1),(255,255,255),(255,255,255), (200,200,50), 3)
                 # print(cor, s, face.normal, face.centroide)
-                # cor = np.array(cor).astype(int)
-                # cor = (255,0,0)
+                cor = np.array(cor).astype(int)
                 # print(cor)
-                self.guro(face, vertices, (255,0,0),(0,255,0),(0,0,255))
+                clip_poly = sutherland_hodgman_clip(vertices[face.vertices], 30 , 0, 346, 340)
+                triangulos =np.array( triangulate_convex_polygon(clip_poly))
+                for ti,t in enumerate(triangulos):
+                    cor = (255//(face_idx+1),face_idx**face_idx*ti,ti**3+200)
+                    cor = np.random.randint(0, 256, size=3)
+                    self.fillpoli(t, cor)
+                    vs = np.array(t).T[:2].T.astype(int)
+                    self.draw_vertices(vs)
 
-                # self.fillpoli(face, vertices, cor)
+
                 # self.fillpoly(face, vertices, (100//(face_idx+1), 200//(face_idx+1),  face_idx))
-                # self.fillpoli(face, vertices, ())
-
+                # self.fillpoli(vertices, cor)
             self.draw_vertices(vertices.T[:2].T)
+
             pg.display.flip()
 
     def draw_mouse_coords(self, screen, x, y):
         coord_text = f"X: {x}, Y: {y}"
         # text_surf = self.font.render(coord_text, True, (0, 255, 255))
-        # print(coord_text)
+        print(coord_text)
         # screen.blit(text_surf, (10, 70))
 
     def draw_cam_coords(self, screen, x, y, z):
