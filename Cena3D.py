@@ -128,10 +128,13 @@ class Cena3D:
             deltaZ = (v1['z'] - v0['z']) / varX
             for j in range(intervalo[0], intervalo[1]):
                 # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
-                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
-                    self.cor_buffer[j, y] = color
-                    # self.screen.set_at((j, y), color)
-                    self.z_buffer[j, y] = z
+                try:
+                    if 0 <= j < self.dimensions[5] and 0 <= y < self.dimensions[7] and z > self.z_buffer[y, j]:
+                        self.cor_buffer[y, j] = color
+                        self.z_buffer[y, j] = z
+                except:
+                    print(j,y)
+                    exit()
                 z += deltaZ
 
         swaped = False
@@ -155,10 +158,10 @@ class Cena3D:
 
             for j in range(intervalo[0], intervalo[1]):
                 # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
-                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
                     # self.screen.set_at((j, y), color)
-                    self.z_buffer[j, y] = z
-                    self.cor_buffer[j, y] = color
+                    self.z_buffer[y, j] = z
+                    self.cor_buffer[y, j] = color
                 z += deltaZ
 
     def gouraud(self, all_vertices, cor_v0, cor_v1, cor_v2):
@@ -454,7 +457,6 @@ class Cena3D:
     def render(self):
         for obj_idx, o in enumerate(self.objetos):
             faces = o.get_faces_visible(self.camera_pos)
-            # print(self.camera_pos)
             # faces = o.get_faces()
             vertices = o.get_vertices()
             # ones_column = np.ones((vertices.shape[0], 1))
@@ -531,8 +533,8 @@ class Cena3D:
         self.screen.blit(surf, (0, 0))
         self.draw_vertices(vertices.T[:2].T)
         pg.display.flip()
-        self.cor_buffer = np.full((self.height, self.width, 3), (24, 24, 24))
-        self.z_buffer = np.full((self.height, self.width), -float('inf'))
+        self.cor_buffer = np.full((self.dimensions[7], self.dimensions[5], 3), (24, 24, 24))
+        self.z_buffer = np.full((self.dimensions[7], self.dimensions[5]), -float('inf'))
         # pg.display.flip()
 
 
@@ -587,7 +589,7 @@ class Cena3D:
     def run(self):
         pg.init()
         size = (self.width, self.height)
-        self.screen = pg.display.set_mode(size, display=0, flags=pg.RESIZABLE)
+        self.screen = pg.display.set_mode(size, display=0)
         clock = pg.time.Clock()
 
         running = True
@@ -596,8 +598,11 @@ class Cena3D:
                 if event.type == pg.QUIT:
                     running = False
                 elif event.type == pg.VIDEORESIZE:
+                    self.is_menu_open = True
                     self.width = event.w
                     self.height = event.h
+                    self.dimensions = [self.dimensions[0], self.dimensions[1], self.dimensions[2], self.dimensions[3],
+                                        0,event.w,0,event.h]
                     self.z_buffer = np.full(
                         (self.height, self.width), -float('inf'))
                     self.cor_buffer = np.full(
@@ -673,7 +678,7 @@ class Cena3D:
 
             
         # Define a posição onde o texto será renderizado
-            # self.screen.fill(pg.Color('darkslategray'))
+            # self.screen.fill(pg.Color('darkslategray'))j
 
             if self.is_menu_open:
                 settings_menu_theme = pgm.themes.THEME_DARK.copy()
@@ -690,6 +695,9 @@ class Cena3D:
                 def setSizes(text):
                     try:
                         self.dimensions = [int(x) for x in text.strip('[]').split(',')]
+                        print(self.dimensions)
+                        self.cor_buffer = np.full((self.dimensions[7], self.dimensions[5], 3), (24, 24, 24))
+                        self.z_buffer = np.full((self.dimensions[7], self.dimensions[5]), -float('inf'))
                     except ValueError:
                         print('Erro ao parse a string de tamanho da tela.')
 
