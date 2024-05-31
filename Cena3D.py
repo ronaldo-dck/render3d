@@ -11,6 +11,11 @@ from recorte2d import *
 import luz
 import traceback
 import numpy as np
+import warnings
+
+
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
 
 
 class Cena3D:
@@ -593,7 +598,7 @@ class Cena3D:
         while running:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
-                    running = False
+                    return 'QUIT', 1
                 elif event.type == pg.VIDEORESIZE:
                     self.is_menu_open = True
                     self.width = event.w
@@ -608,6 +613,8 @@ class Cena3D:
                 elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
                         self.is_menu_open = not self.is_menu_open
+                    elif event.key == pg.K_l:
+                        return '2D', 2
                     elif event.key == pg.K_1:
                         self.current_shader = 'constante'
                     elif event.key == pg.K_2:
