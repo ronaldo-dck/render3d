@@ -134,7 +134,6 @@ class Objeto3d:
 
     def internal_rotate(self, angle, axis):
         G = np.array(self.get_centro_box_envolvente())
-        print(self.__vertices)
         if axis == 'Y':
             vertices = translate(G) @ rotate_y(angle) @ translate(-G)  @ self.__vertices_h.T
         if axis == 'X':
@@ -143,7 +142,6 @@ class Objeto3d:
             vertices = translate(G) @ rotate_z(angle) @ translate(-G)  @ self.__vertices_h.T
         self.__vertices = vertices[:3].T
         self.__vertices_h = vertices.T
-        print(vertices)
         
 
 

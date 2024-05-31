@@ -40,11 +40,11 @@ class Cena3D:
         self.font = pg.font.SysFont(None, 20)
 
     def create_objetos(self):
-        near = 0.1
-        far = 1000
-        z_min = near/far
+        # near = 0.1
+        # far = 1000
+        # z_min = near/far
 
-        recort3d = np.identity(4)
+        # recort3d = np.identity(4)
         
         self.camera = Camera(self.camera_pos, self.camera_lookat, (0, 1, 0))
         self.projetion = Projetion().projetion_matrix(self.plano_proj)
@@ -55,12 +55,12 @@ class Cena3D:
                 [0, 0, 1, 0],
                 [0, 0, 0, 1]
             ])
-            recort3d = np.array([  
-                    [1, 0, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 0, 1/(1+z_min), -z_min/(1+z_min)],
-                    [0, 0, -1, 0]
-                    ])
+            # recort3d = np.array([  
+            #         [1, 0, 0, 0],
+            #         [0, 1, 0, 0],
+            #         [0, 0, 1/(1+z_min), -z_min/(1+z_min)],
+            #         [0, 0, -1, 0]
+            #         ])
         
         self.to_screen = Projetion().to_screen(self.dimensions[0], self.dimensions[1], self.dimensions[2], self.dimensions[3], self.dimensions[4], self.dimensions[5], self.dimensions[6], self.dimensions[7])
 
@@ -252,10 +252,10 @@ class Cena3D:
             current_color = tempColorIni[:]
 
             for j in range(intervalo[0], intervalo[1]):
-                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
+                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
                     try:
                             # self.screen.set_at((j, y), tuple(map(int, current_color)))
-                            self.cor_buffer[j, y] = current_color
+                            self.cor_buffer[y, j] = current_color
                         # print(y,current_color)
                     except:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
@@ -295,16 +295,16 @@ class Cena3D:
 
             current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
-                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
                     try:
                         # self.screen.set_at((j, y), np.array(current_color).astype(int))
-                        self.cor_buffer[j, y] = current_color
+                        self.cor_buffer[y, j] = current_color
                         # print(y,current_color)
                     except Exception as e:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
 
-                    self.z_buffer[j, y] = z
+                    self.z_buffer[y, j] = z
 
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
@@ -396,15 +396,15 @@ class Cena3D:
             current_color = tempColorIni[:]
 
             for j in range(intervalo[0], intervalo[1]):
-                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
                     try:
                         n = current_color/np.linalg.norm(current_color)
                         cor = luz.calc_luz_phong(s, l_unit ,n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
-                        self.cor_buffer[j, y] = cor
+                        self.cor_buffer[y, j] = cor
                     except:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
-                    self.z_buffer[j, y] = z
+                    self.z_buffer[y, j] = z
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
 
@@ -439,11 +439,11 @@ class Cena3D:
 
             current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
-                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
+                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
                     try:
                         n = current_color/np.linalg.norm(current_color)
                         cor = luz.calc_luz_phong(s, l_unit, n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
-                        self.cor_buffer[j, y] = cor
+                        self.cor_buffer[y, j] = cor
                     except Exception as e:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
@@ -527,19 +527,16 @@ class Cena3D:
                         elif self.current_shader == 'phong':
                             self.phong(s, l_unit ,t, tc[0], tc[1], tc[2], o)
                     
-                    # self.gouraud(t, cor, cor, cor)
-                # self.fillpoli(face, vertices, cor)
+
+
         surf = pg.surfarray.make_surface(self.cor_buffer)
         self.screen.blit(surf, (0, 0))
-        self.draw_vertices(vertices.T[:2].T)
+        # self.draw_vertices(vertices.T[:2].T)
         pg.display.flip()
         self.cor_buffer = np.full((self.dimensions[7], self.dimensions[5], 3), (24, 24, 24))
         self.z_buffer = np.full((self.dimensions[7], self.dimensions[5]), -float('inf'))
-        # pg.display.flip()
 
 
-    def transformada(self):
-        pass
 
     def wireframe(self):
 
@@ -626,22 +623,16 @@ class Cena3D:
                         objPos = obj.get_centro_box_envolvente()
                         if event.key == pg.K_q:
                             obj.translado((-10, 0, 0))
-                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_e:
                             obj.translado((10, 0, 0))
-                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_d:
                             obj.translado((0, 0, -10))
-                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_a:
                             obj.translado((0, 0, 10))
-                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_w:
                             obj.translado((0, 10, 0))
-                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_s:
                             obj.translado((0, -10, 0))
-                            print(obj.get_centro_box_envolvente())
                         elif event.key == pg.K_UP:
                             obj.internal_rotate(6, 'X')
                         elif event.key == pg.K_DOWN:
@@ -695,7 +686,6 @@ class Cena3D:
                 def setSizes(text):
                     try:
                         self.dimensions = [int(x) for x in text.strip('[]').split(',')]
-                        print(self.dimensions)
                         self.cor_buffer = np.full((self.dimensions[7], self.dimensions[5], 3), (24, 24, 24))
                         self.z_buffer = np.full((self.dimensions[7], self.dimensions[5]), -float('inf'))
                     except ValueError:
