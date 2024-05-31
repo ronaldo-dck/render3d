@@ -1,11 +1,7 @@
 import pygame as pg
 import pygame_menu as pgm
 from pygame.locals import *
-# from OpenGL.GL import *
-# from OpenGL.GLUT import *
-# from OpenGL.GLU import *
 from Objeto3d import Objeto3d, Face
-import random
 from camera import Camera, Projetion
 from recorte2d import *
 import luz
@@ -265,7 +261,7 @@ class Cena3D:
                     except:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
-                    self.z_buffer[j, y] = z
+                    self.z_buffer[y, j] = z
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
 
@@ -453,7 +449,7 @@ class Cena3D:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
 
-                    self.z_buffer[j, y] = z
+                    self.z_buffer[y, j] = z
 
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
@@ -769,9 +765,11 @@ class Cena3D:
                 )
                 
                 def setRotacoes(num):
-                    self.rotacoes = int(num)
-                    self.objetos[self.selected_obj].create(int(num))
-
+                    try:
+                        self.rotacoes = int(num)
+                        self.objetos[self.selected_obj].create(int(num))
+                    except:
+                        pass
                 menu.add.text_input(
                     'Rotacoes: ',
                     default=self.objetos[self.selected_obj].rotacoes,
@@ -829,6 +827,20 @@ class Cena3D:
                     default=(self.objetos[self.selected_obj].index_reflex).__str__(),
                     onchange=setMatReflex
                 )
+
+                def setMatscaler(text):
+                    try:
+                        self.objetos[self.selected_obj].scale(float(text))
+                    except ValueError:
+                        print('Erro ao parse a string de fator.')
+
+                menu.add.text_input(
+                    title='Fator escala= ',
+                    default='1',
+                    onchange=setMatscaler
+                )
+
+                
 
                 def controlObj():
                     self.controling_obj = True

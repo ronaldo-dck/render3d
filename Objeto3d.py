@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from camera import Camera, Projetion
 from matrix_functions import *
 
@@ -146,7 +144,7 @@ class Objeto3d:
 
 
     def scale(self, fator):
-        vertices = translate(fator) @ self.get_vertices().T
+        vertices = scale(fator) @ self.get_vertices().T
         self.__vertices = vertices[:3].T
         self.__vertices_h = vertices.T
 
@@ -185,42 +183,7 @@ class Objeto3d:
         faces_ordenadas = [f for _, _, f in ordem]
         return faces_ordenadas
 
-    def create_objetos(self, obs):
-        self.camera = Camera(obs, (0, 0, 0), (0, 1, 0))
-        self.projetion = Projetion().projetion_matrix(410)
-        self.to_screen = Projetion().to_screen(-800//2, 800//2, -
-                                               800//2, 800//2, 0, 800, 0, 800)
 
-        # self.to_screen = Projetion().to_screen(-8, 8, -6, 6, 0, self.width, 0, self.height)
-
-        return self.to_screen @ self.projetion @ self.camera.camera_matrix()
-
-    def visualize(self, observador=(20, -20, 20)):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plotando vértices
-        vertices = (self.create_objetos(observador) @ self.get_vertices().T)
-        vertices /= vertices[-1]
-        vertices = vertices.T
-        ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2])
-        # Plotando apenas as faces visíveis
-        for face in self.get_faces_visible(observador):
-            v0, v1, v2 = face.vertices
-            tri = Poly3DCollection([[
-                vertices[v0][:3],
-                vertices[v1][:3],
-                vertices[v2][:3]
-            ]])
-            tri.set_color((0, 1, 0, 0.5))  # Define cor verde com transparência
-            tri.set_edgecolor('k')  # Define cor das arestas
-            ax.add_collection3d(tri)
-
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-
-        plt.show()
 
     def calc_normais_vertices(self):
         self.normais_vetores = []
@@ -235,16 +198,3 @@ class Objeto3d:
             self.normais_vetores.append(n_unit)
 
 
-if __name__ == '__main__':
-    obj1 = Objeto3d([(-15, 10), (15, 15)])
-    obj1.rotacaoX(4)
-
-    # print("Arestas:", obj1.get_edges())
-    # print("Vértices:\n", np.round(obj1.get_vertices(),1))
-    # for f in obj1.get_faces_visible((-1, 0, 0)):
-    #     print(f.vertices)
-
-    # for f in obj1.get_faces():
-    #     print(f.vertices)
-
-    obj1.calc_normais_vertices()

@@ -1,5 +1,4 @@
-import matplotlib.patches as patches
-import matplotlib.pyplot as plt
+
 
 
 def inside(point, edge, x_min, y_min, x_max, y_max):
@@ -80,53 +79,3 @@ def triangulate_convex_polygon(polygon, polygon_colors):
         triangles_colors.append(triangle_colors)
     return triangles, triangles_colors
 
-
-def plot_polygons(original_polygon, original_colors, clipped_polygon, clipped_colors, triangles, x_min, y_min, x_max, y_max):
-    fig, ax = plt.subplots()
-
-    # Plot original polygon
-    original_polygon.append(original_polygon[0])
-    original_colors.append(original_colors[0])
-    for i in range(len(original_polygon) - 1):
-        x_original, y_original, _ = zip(*original_polygon[i:i+2])
-        ax.plot(x_original, y_original, color=original_colors[i])
-
-    # Plot clipped polygon
-    if clipped_polygon:
-        clipped_polygon.append(clipped_polygon[0])
-        clipped_colors.append(clipped_colors[0])
-        for i in range(len(clipped_polygon) - 1):
-            x_clipped, y_clipped, _ = zip(*clipped_polygon[i:i+2])
-            ax.plot(x_clipped, y_clipped, color=clipped_colors[i])
-
-    # Plot triangles
-    for triangle in triangles:
-        x_tri, y_tri, _ = zip(*triangle)
-        ax.plot(list(x_tri) + [x_tri[0]], list(y_tri) + [y_tri[0]], 'g--')
-
-    # Plot clipping window
-    rect = patches.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min, linewidth=1, edgecolor='g', facecolor='none')
-    ax.add_patch(rect)
-
-    ax.set_title('Polygon Clipping and Triangulation')
-    ax.set_xlim(min(x_min, min([p[0] for p in original_polygon])), max(x_max, max([p[0] for p in original_polygon])))
-    ax.set_ylim(min(y_min, min([p[1] for p in original_polygon])), max(y_max, max([p[1] for p in original_polygon])))
-    plt.gca().set_aspect('equal', adjustable='box')
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.show()
-
-
-if __name__ == "__main__":
-    polygon = [(151.914, 340.497, 0), (369.403, 223.801, 50), (149.556, -51.107, 100)]
-    colors = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]  # RGB colors for the vertices
-    x_min, y_min = 0, 0
-    x_max, y_max = 319, 239
-
-    clipped_polygon, clipped_colors = sutherland_hodgman_clip(polygon, colors, x_min, y_min, x_max, y_max)
-    triangles = triangulate_convex_polygon(clipped_polygon)
-    plot_polygons(polygon, colors, clipped_polygon, clipped_colors, triangles, x_min, y_min, x_max, y_max)
-    print("Polígono recortado:", clipped_polygon)
-    print("Triângulos resultantes da triangulação:")
-    for triangle in triangles:
-        print(triangle)
