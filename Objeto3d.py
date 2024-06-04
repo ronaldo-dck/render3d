@@ -34,9 +34,9 @@ class Objeto3d:
         self.__polyline = polyline
         self.normais_vetores = []
         self.rotacoes = 4
-        self.material_a = [1,1,1]
-        self.material_d = [1,1,1]
-        self.material_s = [1,1,1]
+        self.material_a = [0.5,0.5,0.5]
+        self.material_d = [0.5,0.5,0.5]
+        self.material_s = [0.5,0.5,0.5]
         self.index_reflex = 10
 
     def set_materiais(self, material_a, material_d, mateirial_s, n):

@@ -130,9 +130,9 @@ class Cena3D:
             for j in range(intervalo[0], intervalo[1]):
                 # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
                 try:
-                    if 0 <= j < self.dimensions[5] and 0 <= y < self.dimensions[7] and z > self.z_buffer[y, j]:
-                        self.cor_buffer[y, j] = color
-                        self.z_buffer[y, j] = z
+                    if 0 <= j < self.dimensions[5] and 0 <= y < self.dimensions[7] and z > self.z_buffer[j, y]:
+                        self.cor_buffer[j, y] = color
+                        self.z_buffer[j, y] = z
                 except:
                     print(j,y)
                     exit()
@@ -159,10 +159,10 @@ class Cena3D:
 
             for j in range(intervalo[0], intervalo[1]):
                 # if j >= 0 and y >= 0 and j < self.z_buffer.shape[0] and y < self.height:
-                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     # self.screen.set_at((j, y), color)
-                    self.z_buffer[y, j] = z
-                    self.cor_buffer[y, j] = color
+                    self.z_buffer[j, y] = z
+                    self.cor_buffer[j, y] = color
                 z += deltaZ
 
     def gouraud(self, all_vertices, cor_v0, cor_v1, cor_v2):
@@ -253,15 +253,15 @@ class Cena3D:
             current_color = tempColorIni[:]
 
             for j in range(intervalo[0], intervalo[1]):
-                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
+                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     try:
                             # self.screen.set_at((j, y), tuple(map(int, current_color)))
-                            self.cor_buffer[y, j] = current_color
+                            self.cor_buffer[j, y] = current_color
                         # print(y,current_color)
                     except:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
-                    self.z_buffer[y, j] = z
+                    self.z_buffer[j, y] = z
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
 
@@ -296,26 +296,27 @@ class Cena3D:
 
             current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
-                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     try:
                         # self.screen.set_at((j, y), np.array(current_color).astype(int))
-                        self.cor_buffer[y, j] = current_color
+                        self.cor_buffer[j, y] = current_color
                         # print(y,current_color)
                     except Exception as e:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
 
-                    self.z_buffer[y, j] = z
+                    self.z_buffer[j, y] = z
 
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
 
-    def phong(self, s, l_unit, all_vertices, vetor_v0, vetor_v1, vetor_v2, obj):
-        
+
+    def phong(self,s, l_unit, all_vertices, cor_v0, cor_v1, cor_v2, obj):
+
         vertices_with_colors = [
-            {'vertex': all_vertices[0], 'color': vetor_v0},
-            {'vertex': all_vertices[1], 'color': vetor_v1},
-            {'vertex': all_vertices[2], 'color': vetor_v2}
+            {'vertex': all_vertices[0], 'color': cor_v0},
+            {'vertex': all_vertices[1], 'color': cor_v1},
+            {'vertex': all_vertices[2], 'color': cor_v2}
         ]
 
         # Sort vertices based on the y-coordinate
@@ -340,6 +341,7 @@ class Cena3D:
             'z': vertices_with_colors[2]['vertex'][2],
             'color': vertices_with_colors[2]['color']
         }
+
         arestas = [
             {
                 'ini': v0,
@@ -397,15 +399,17 @@ class Cena3D:
             current_color = tempColorIni[:]
 
             for j in range(intervalo[0], intervalo[1]):
-                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
+                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     try:
-                        n = current_color/np.linalg.norm(current_color)
-                        cor = luz.calc_luz_phong(s, l_unit ,n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
-                        self.cor_buffer[y, j] = cor
+                            # self.screen.set_at((j, y), tuple(map(int, current_color)))
+                            n = current_color/np.linalg.norm(current_color)
+                            cor = luz.calc_luz_phong(s, l_unit ,n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
+                            self.cor_buffer[j, y] = cor
+                        # print(y,current_color)
                     except:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
-                    self.z_buffer[y, j] = z
+                    self.z_buffer[j, y] = z
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
 
@@ -440,19 +444,24 @@ class Cena3D:
 
             current_color = tempColorIni[:]
             for j in range(intervalo[0], intervalo[1]):
-                if 0 <=j < self.width and 0 <= y < self.height and z > self.z_buffer[y, j]:
+                if 0 <= j < self.width and 0 <= y < self.height and z > self.z_buffer[j, y]:
                     try:
+                        # self.screen.set_at((j, y), np.array(current_color).astype(int))
+                        
                         n = current_color/np.linalg.norm(current_color)
-                        cor = luz.calc_luz_phong(s, l_unit, n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
-                        self.cor_buffer[y, j] = cor
+                        cor = luz.calc_luz_phong(s, l_unit ,n, obj.material_a, obj.material_d, obj.material_s, self.luz_ambiente, self.luz_prop, obj.index_reflex)
+                        self.cor_buffer[j, y] = cor
+                        # print(y,current_color)
                     except Exception as e:
                         print(y, np.array(current_color).astype(int), traceback.format_exc())
                         exit()
 
-                    self.z_buffer[y, j] = z
+                    self.z_buffer[j, y] = z
 
                 z += deltaZ
                 current_color = [current_color[i] + color_step[i] for i in range(3)]
+
+
 
 
     def render(self):
@@ -510,6 +519,13 @@ class Cena3D:
 
                 clip_face, clip_face_colors = sutherland_hodgman_clip(
                     vertices[face.vertices], [cor1, cor2, cor3], self.dimensions[4], self.dimensions[6], self.dimensions[5], self.dimensions[7])
+                
+                if self.current_shader == 'phong':
+                        clip_face, clip_face_colors = sutherland_hodgman_clip(
+                                vertices[face.vertices], [s1, s2, s3], self.dimensions[4], self.dimensions[6], self.dimensions[5], self.dimensions[7])
+                
+
+                
                 if len(clip_face) > 0:
                     triangles, triangles_colors = triangulate_convex_polygon(clip_face, clip_face_colors)
 
@@ -559,6 +575,7 @@ class Cena3D:
                 pg.draw.polygon(self.screen, (255,200,0), vertices[face.vertices], width=1)
              
         # pg.display.flip()
+
 
 
 
